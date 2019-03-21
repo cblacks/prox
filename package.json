@@ -1,7 +1,7 @@
 {
-  "name": "ui-driver-skel",
+  "name": "ui-driver-proxmox",
   "version": "0.0.2",
-  "description": "Skeleton Rancher UI driver for custom docker-machine drivers",
+  "description": "Rancher UI driver for Proxmox VE docker-machine drivers",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/rancher/ui-driver-skel.git"
