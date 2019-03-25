@@ -130,6 +130,7 @@ gulp.task('build', gulp.series('compile'));
 gulp.task('server', gulp.parallel(['build', 'watch'], function () {
   return gulpConnect.server({
     root: [DIST],
+    host: "0.0.0.0",
     port: process.env.PORT || 3000,
     https: false,
   });

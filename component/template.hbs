@@ -1,34 +1,174 @@
 <section class="horizontal-form">
+
   {{#accordion-list showExpandAll=false as | al expandFn |}}
     {{!-- This line shows the driver title which you don't have to change it --}}
     <div class="over-hr mb-20"><span>{{driverOptionsTitle}}</span></div>
 
     {{!-- An example input option --}}
-    <div class="row box mt-20">
-      <h4>Instance Options</h4>
+    {{#accordion-list-item 
+      title="Proxmox VE Options" 
+      detail="Enter Proxmox VE Credentials to log in"
+      expandAll=expandAll
+      expand=(action expandFn)
+      expandOnInit=true
+    }}
+ 
       <div class="row">
-        <div class="col span-2 col-inline">
-          <label>CPUs</label>
+        <div class="col span-6">
+          <label class="acc-label">Proxmox VE Server</label>
+          {{input value=config.host classNames="form-control"}}
         </div>
+        <div class="col span-6">
+          <label class="acc-label">Port</label>
+          {{input value=config.port classNames="form-control"}}
+        </div>
+      </div>
 
-        <div class="col span-1">
-          {{config.cpuCount}}
+      <div class="row">
+        <div class="col span-3">
+          <label class="acc-label">Username</label>
+          {{input value=config.user classNames="form-control"}}
         </div>
         <div class="col span-3">
-          {{input-slider value=config.cpuCount valueMin=1 valueMax=32}}
+          <label class="acc-label">Realm</label>
+          {{input value=config.realm classNames="form-control"}}
         </div>
 
-        <div class="col span-2 col-inline">
-          <label>Memory Size</label>
+         <div class="col span-6">
+          <label class="acc-label">Password</label>
+          {{input type="password" value=config.password classNames="form-control"}}
         </div>
-        <div class="col span-4">
+      </div>
+
+      <div class="text-center pt-20 ember-view">
+        <button {{action "proxmoxLogin"}} class="btn bg-primary">Connect Proxmox</button>
+      </div>
+
+    {{/accordion-list-item}}
+
+    {{#accordion-list-item 
+              title="Guesst user information"
+              detail="Set guest os user information such authorized ssh key's and ssh private key"
+              expandAll=expandAll
+              expand=(action expandFn)
+              expandOnInit=true
+        }}
+     <div class="row">
+        <div class="col span-6">
+          <label class="acc-label">Username</label>
+          {{input value=config.guestUsername classNames="form-control"}}
+        </div>
+        <div class="col span-6">
+          <label class="acc-label">Password</label>
+          {{input type="password" value=config.guestPassword classNames="form-control"}}
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col span-6">
+          <label class="acc-label">SSH Private Key</label>
+          {{textarea value=config.guestSshPrivateKey classNames="form-control"}}
+        </div>
+        <div class="col span-6">
+          <label class="acc-label">SSH Public Key</label>
+          {{textarea value=config.guestSshPublicKey classNames="form-control"}}
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col span-6">
+          <label class="acc-label">Authorized SSH keys (one key per line)</label>
+          {{textarea value=config.guestSshAuthorizedKeys classNames="form-control"}}
+        </div>
+        <div class="col span-6">
+          <label class="acc-label">Password</label>
+          {{input type="password" value=config.guestPassword classNames="form-control"}}
+        </div>
+      </div>
+    {{/accordion-list-item}}
+
+
+    {{#accordion-list-item 
+          title="CPU & Memory"
+          detail="VM CPU and Memory Configuration"
+          expandAll=expandAll
+          expand=(action expandFn)
+          expandOnInit=true
+    }}
+      <div class="row">
+       
+        <div class="col span-3">
+          <label class="acc-label">CPU</label>
           <div class="input-group">
-            {{input-integer min=1 value=config.memorySize classNames="form-control"}}
-            <div class="input-group-addon bg-default">MB</div>
+            {{input-integer min=1 value=config.cpuSockets classNames="form-control"}}
+            <div class="input-group-addon bg-default">Sockets (1 - 4)</div>
+          </div>
+        </div>
+
+        <div class="col span-3">
+            <label class="acc-label">&nbsp;</label>
+            <div class="input-group">
+              {{input-integer min=1 value=config.cpuCores classNames="form-control"}}
+              <div class="input-group-addon bg-default">Cores (1 - 128)</div>
+            </div>
+        </div>
+
+        <div class="col span-6">
+          <label class="acc-label">Memory Size</label>
+          <div class="input-group">
+            {{input-integer min=1 value=config.memoryGb classNames="form-control"}}
+            <div class="input-group-addon bg-default">GB</div>
           </div>
         </div>
       </div>
-    </div>
+
+    {{/accordion-list-item}}
+
+    {{#accordion-list-item 
+          title="Network"
+          detail="VM Network Configuration"
+          expandAll=expandAll
+          expand=(action expandFn)
+          expandOnInit=true
+    }}
+      <div class="row">
+        <div class="col span-6">
+          <label class="acc-label">Bridge</label>
+          {{new-select
+              classNames="form-control"
+              content=bridges
+              optionLabelPath="name"
+              optionValuePath="value"
+              value=config.netBridge
+          }}
+        </div>
+
+        <div class="col span-6">
+          <label class="acc-label">Model</label>
+          {{new-select
+              classNames="form-control"
+              content=netModelChoices
+              optionLabelPath="name"
+              optionValuePath="value"
+              value=config.netModel
+          }}
+
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col span-6">
+          <label class="acc-label">VLAN Tag (1 - 4094)</label>
+          {{input type=text value=config.netVlantag classNames="form-control"}}
+        </div>
+
+        <div class="col span-6">
+          <label class="acc-label">MAC Address</label>
+          
+        </div>
+      </div>
+
+    {{/accordion-list-item}}
 
     {{!-- This following contains the Name, Labels and Engine Options fields --}}
     <div class="over-hr"><span>{{templateOptionsTitle}}</span></div>
