@@ -14,29 +14,37 @@
     }}
  
       <div class="row">
-        <div class="col span-6">
-          <label class="acc-label">Proxmox VE Server</label>
-          {{input value=config.host classNames="form-control"}}
+        <div class="col span-4">
+          <label class="acc-label">Host Name</label>
+          {{input value=config.host placeholder=resourceFields.host.default classNames="form-control"}}
         </div>
-        <div class="col span-6">
+        <div class="col span-4">
+          <label class="acc-label">Node name</label>
+          {{input value=config.node placeholder=resourceFields.node.default classNames="form-control"}}
+        </div>
+        <div class="col span-4">
           <label class="acc-label">Port</label>
-          {{input value=config.port classNames="form-control"}}
+          {{input value=config.port placeholder=resourceFields.port.default classNames="form-control"}}
+          <p class="text-info text-small m-0">{{get resourceFields "port.description"}}</p>
         </div>
       </div>
 
       <div class="row">
-        <div class="col span-3">
+        <div class="col span-4">
           <label class="acc-label">Username</label>
-          {{input value=config.user classNames="form-control"}}
+          {{input value=config.user placeholder=resourceFields.user.default classNames="form-control"}}
+          <p class="text-info text-small m-0">{{get resourceFields "user.description"}}</p>
         </div>
-        <div class="col span-3">
+        <div class="col span-4">
           <label class="acc-label">Realm</label>
-          {{input value=config.realm classNames="form-control"}}
+          {{input value=config.realm placeholder=resourceFields.realm.default classNames="form-control"}}
+          <p class="text-info text-small m-0">{{get resourceFields "realm.description"}}</p>
         </div>
 
-         <div class="col span-6">
+         <div class="col span-4">
           <label class="acc-label">Password</label>
           {{input type="password" value=config.password classNames="form-control"}}
+          <p class="text-info text-small m-0">{{get resourceFields "password.description"}}</p>
         </div>
       </div>
 
@@ -56,11 +64,13 @@
      <div class="row">
         <div class="col span-6">
           <label class="acc-label">Username</label>
-          {{input value=config.guestUsername classNames="form-control"}}
+          {{input value=config.getUsername placeholder=resourceFields.guestUsername.default classNames="form-control"}}
+          <p class="text-info text-small m-0">{{get resourceFields "guestUsername.description"}}</p>
         </div>
         <div class="col span-6">
           <label class="acc-label">Password</label>
           {{input type="password" value=config.guestPassword classNames="form-control"}}
+          <p class="text-info text-small m-0">{{get resourceFields "guestPassword.description"}}</p>
         </div>
       </div>
 
@@ -68,25 +78,50 @@
         <div class="col span-6">
           <label class="acc-label">SSH Private Key</label>
           {{textarea value=config.guestSshPrivateKey classNames="form-control"}}
+          <p class="text-info text-small m-0">{{get resourceFields "guestSshPrivateKey.description"}}</p>
         </div>
         <div class="col span-6">
           <label class="acc-label">SSH Public Key</label>
           {{textarea value=config.guestSshPublicKey classNames="form-control"}}
+          <p class="text-info text-small m-0">{{get resourceFields "guestSshPublicKey.description"}}</p>
         </div>
       </div>
 
       <div class="row">
-        <div class="col span-6">
+        <div class="col span-12">
           <label class="acc-label">Authorized SSH keys (one key per line)</label>
           {{textarea value=config.guestSshAuthorizedKeys classNames="form-control"}}
-        </div>
-        <div class="col span-6">
-          <label class="acc-label">Password</label>
-          {{input type="password" value=config.guestPassword classNames="form-control"}}
+          <p class="text-info text-small m-0">{{get resourceFields "guestSshAuthorizedKeys.description"}}</p>
         </div>
       </div>
     {{/accordion-list-item}}
 
+    {{#accordion-list-item 
+          title="OS"
+          detail="VM Guest OS Configuration"
+          expandAll=expandAll
+          expand=(action expandFn)
+          expandOnInit=true
+    }}
+      <div class="row">
+        <div class="col span-6">
+          <label class="acc-label">Image file</label>
+          {{new-select
+              classNames="form-control"
+              content=isoImages
+              optionLabelPath="volid"
+              optionValuePath="volid"
+              value=config.imageFile
+          }}
+          <p class="text-info text-small m-0">{{get resourceFields "imageFile.description"}}</p>
+        </div>
+
+        <div class="col span-6">
+          <label class="acc-label">Nothing</label>
+
+        </div>
+      </div>
+    {{/accordion-list-item}}
 
     {{#accordion-list-item 
           title="CPU & Memory"
@@ -101,16 +136,18 @@
           <label class="acc-label">CPU</label>
           <div class="input-group">
             {{input-integer min=1 value=config.cpuSockets classNames="form-control"}}
-            <div class="input-group-addon bg-default">Sockets (1 - 4)</div>
+            <div class="input-group-addon bg-default">Sockets</div>
           </div>
+          <p class="text-info text-small m-0">{{get resourceFields "cpuSockets.description"}}</p>
         </div>
 
         <div class="col span-3">
             <label class="acc-label">&nbsp;</label>
             <div class="input-group">
               {{input-integer min=1 value=config.cpuCores classNames="form-control"}}
-              <div class="input-group-addon bg-default">Cores (1 - 128)</div>
+              <div class="input-group-addon bg-default">Cores</div>
             </div>
+            <p class="text-info text-small m-0">{{get resourceFields "cpuCores.description"}}</p>
         </div>
 
         <div class="col span-6">
@@ -119,6 +156,7 @@
             {{input-integer min=1 value=config.memoryGb classNames="form-control"}}
             <div class="input-group-addon bg-default">GB</div>
           </div>
+          <p class="text-info text-small m-0">{{get resourceFields "memoryGb.description"}}</p>
         </div>
       </div>
 
@@ -137,10 +175,11 @@
           {{new-select
               classNames="form-control"
               content=bridges
-              optionLabelPath="name"
-              optionValuePath="value"
+              optionLabelPath="iface"
+              optionValuePath="iface"
               value=config.netBridge
           }}
+          <p class="text-info text-small m-0">{{get resourceFields "netBridge.description"}}</p>
         </div>
 
         <div class="col span-6">
@@ -152,14 +191,15 @@
               optionValuePath="value"
               value=config.netModel
           }}
-
+          <p class="text-info text-small m-0">{{get resourceFields "netModel.description"}}</p>
         </div>
       </div>
 
       <div class="row">
         <div class="col span-6">
-          <label class="acc-label">VLAN Tag (1 - 4094)</label>
-          {{input type=text value=config.netVlantag classNames="form-control"}}
+          <label class="acc-label">VLAN Tag</label>
+          {{input type=text value=config.netVlantag placeholder=resourceFields.netVlantag.default classNames="form-control"}}
+          <p class="text-info text-small m-0">{{get resourceFields "netVlantag.description"}}</p>
         </div>
 
         <div class="col span-6">

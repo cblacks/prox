@@ -46,10 +46,13 @@ export default Ember.Component.extend(NodeDriver, {
   driverName:     '%%DRIVERNAME%%',
   config:          alias('model.%%DRIVERNAME%%Config'),
   app:             service(),
+  cookies:         service(),
+  settings:        service(),
+  step:            1,
   authToken:       null,
   netModelChoices: NET_MODEL_CHOICES,
-  step:            1,
-  bridges:         null, 
+  bridges:         [], 
+  isoImages:       [],
 
   init() {
     // This does on the fly template compiling, if you mess with this :cry:
@@ -67,38 +70,34 @@ export default Ember.Component.extend(NodeDriver, {
   // Write your component here, starting with setting 'model' to a machine with your config populated
   bootstrap: function() {
     // bootstrap is called by rancher ui on 'init', you're better off doing your setup here rather then the init function to ensure everything is setup correctly
-
-    let resourceFields = get(this, 'resourceFields');
-    console.log('resourceFields: ', resourceFields);
-    console.log('resourceFields: ', resourceFields['cpuCores']);
-    console.log('resourceFields: ', resourceFields['cpuCores'].default);
-    console.log('resourceFields: ', resourceFields['cpuCores'].description);
-    console.log('resourceFields: ', this.fieldDef('cpuCores').default);
-    console.log('schema: ', get(this, 'schema'));
+    console.log('resourceFields: ', get(this, 'resourceFields'));
+    console.log('schema        : ', get(this, 'schema'));
 
     let config = get(this, 'globalStore').createRecord({
       type:                   '%%DRIVERNAME%%Config',
-      user:                   this.fieldDef('user').default,
-      realm:                  this.fieldDef('realm').default,
+      user:                   '',
+      realm:                  '',
       password:               '',
-      host:                   this.fieldDef('host').default,
-      port:                   8006,
+      host:                   '',
+      node:                   '',
+      port:                   '',
       cpuSockets:             this.fieldDef('cpuSockets').default,
       cpuCores:               this.fieldDef('cpuCores').default,
       memoryGb:               this.fieldDef('memoryGb').default,
       netModel:               this.fieldDef('netModel').default,
       netBridge:              this.fieldDef('netBridge').default,
-      netVlantag:             this.fieldDef('netVlantag').default,
-      pool:                   this.fieldDef('pool').default,
-      guestUername:           'rancher',
+      netVlantag:             '',
+      pool:                   '',
+      guestUername:           '',
       guestPassword:          '',
       guestSshPrivateKey:     '',
       guestSshPublicKey:      '',
       guestSshAuthorizedKeys: '',
+      imageFile:              '',
     });
 
     set(this, 'model.%%DRIVERNAME%%Config', config);
-    console.log('schema: ', get(this, 'schema'));
+    console.log('schema        : ', get(this, 'schema'));
   },
   resourceFields: computed('driverName', 'schema', function() {
     if (get(this, 'schema')) {
@@ -112,13 +111,12 @@ export default Ember.Component.extend(NodeDriver, {
   }),
   schema: computed('driverName', function() {
     const configName = `${ get(this, 'driverName') }Config`;
-
     return get(this, 'globalStore').getById('schema', configName.toLowerCase());
   }),
   fieldDef: function(fieldName) {
     let fields = get(this, 'resourceFields');
     return fields[fieldName];
-  }/*.property('field', 'resourceType', 'schema')*/,
+  },
   // Add custom validation beyond what can be done from the config API schema
   validate() {
     // Get generic API validation errors
@@ -151,67 +149,133 @@ export default Ember.Component.extend(NodeDriver, {
   actions: {
     proxmoxLogin() {
       let self = this;
-      set(this, 'errors', null);
-      let bridges = [];
-      Promise.all([this.authRequest('/access/ticket')]).then(function (responses) {
-        console.log('responses: authRequest: ', responses);
-        self.setProperties({
-          authToken: responses[0].data,
-          errors: [],
-          step: 2,
-        });
-      }).then(function () {
-          // call proxmox login here
+      set(self, 'errors', null);
+      console.log('Proxmox VE Login.');
+      self.apiRequest('POST', '/access/ticket').then((response) => {
 
-          // get bridges
+        if(response.status !== 200) {
+          console.log('response status !== 200 [authentication]: ', response.status );
+          return;
+        }
 
-          setProperties(this, {
-            'bridges': bridges,
-            'step': 2,
+        response.json().then((json) => {
+          console.log('response.json [authentication]: ', json);
+          setProperties(self, {
+            authToken: json.data,
+            step: 2
           });
-      }).catch(function(err) {
-        err.then(function(msg) {
-          self.setProperties({
-            errors: ['Error received from Proxmox VE ' + msg.errors[0].reason ],
-            gettingData: false,
-            step: 1,
-          });
+          self.setNetBridges();
+          self.setIsoStorages();
         });
+
+
+      }).catch((err) => {
+        console.log('Authentication error: ', err);
       });
+      console.log('end of proxmoxLogin');
+      console.log('schema        : ', get(this, 'schema'));
     },
   },
-  authRequest: function(path) {
-    let self     = this;
-    let url      = 'https://' + self.config.host + ':' + self.config.port  + '/api2/json'+ path;
-    let username = self.config.user + '@' + self.config.realm;
-    let password = self.config.password;
-    //let params   = encodeURIComponent('username') + '=' + encodeURIComponent(username) + '&' + encodeURIComponent('password') + '=' + encodeURIComponent(password);
-    let params   = 'username=' + username + '&password=' + password;
-
-    let headers  = new Headers();
-    headers.append('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8');
-    headers.append('Accept', 'application/json');
-
-    console.log('params: ', params);
-
-    return fetch(url, {
-      method: 'POST',
-      headers: headers,
-      mode: 'no-cors',
-      dataType: 'json',
-      body: params
-    }).then(res => res.ok ? res.json : Promise.reject( res.json() ) );
+  setIsoStorage(storage) {
+    let self = this;
+    self.apiRequest('GET', `/nodes/${self.config.node}/storage/${storage}/content`).then((response) => {
+      if(response.status !== 200) {
+        console.log('response status !== 200 [storage-contents]: ', response.status );
+        return;
+      }
+      response.json().then((json) => {
+        let storage = json.data.filter(store => store.format === 'iso' && store.content === 'iso');
+        let isoStorage = get(self, 'isoImages');
+        isoStorage.push(...storage);
+        console.log('isoStorage: ', isoStorage);
+        setProperties(self, {
+          isoImages: isoStorage,
+        });
+      });
+    }).catch((err) => {
+      console.log('Error getting Networks: ', err);
+    });
+    console.log('end of setIsoStorage');
+    console.log('schema        : ', get(this, 'schema'));
   },
-  apiRequest: function(path) {
-    let self     = this;
-    let url      = 'https://' + self.config.host + ':' +  self.config.port + '/api2/json:'  + path;
-    let username = self.config.username + '@' +self.config.realm;
-    let password = self.config.password;
+  setIsoStorages() {
+    let self = this;
+    self.apiRequest('GET', `/nodes/${self.config.node}/storage`).then((response) => {
+      if(response.status !== 200) {
+        console.log('response status !== 200 [storage]: ', response.status );
+        return;
+      }
+      response.json().then((json) => {
+        let storage = json.data.filter(store => store.type === 'dir' && store.content.includes('iso'));
+        storage.forEach( (store) =>  {
+          self.setIsoStorage(store.storage);
+        });
 
-    return fetch(url, {
-      method: 'POST',
-      body: JSON.stringify({username:username,password:password})
-    }).then(res => res.ok ? res.json : Promise.reject( res.json() ) );
+      });
+    }).catch((err) => {
+      console.log('Error getting Networks: ', err);
+    });
+    console.log('end of setIsoStorages');
+    console.log('schema        : ', get(this, 'schema'));
+  },
+  setNetBridges: function() {
+    let self = this;
+    self.apiRequest('GET', `/nodes/${self.config.node}/network`).then((response) => {
+      if(response.status !== 200) {
+        console.log('response status !== 200 [networks]: ', response.status );
+        return;
+      }
+      response.json().then((json) => {
+        let netBridges = json.data.filter(device => device.type === 'bridge');
+        console.log('netBridges: ', netBridges);
+        setProperties(self, {
+          bridges: netBridges,
+        });
+      });
+    }).catch((err) => {
+      console.log('Error getting Networks: ', err);
+    });
+    console.log('end of setNetBridges');
+    console.log('schema        : ', get(this, 'schema'));
+  },
+  apiRequest: function(method, path) {
+    let self       = this;
+    let version    = `${ get(this, 'settings.rancherVersion') }`;
+    let apiUrl     = `${self.config.host}:${self.config.port}/api2/json${path}`;
+    let url        = `${ get(this, 'app.proxyEndpoint') }/`;
+    url           += apiUrl.replace(/^http[s]?:\/\//, '');
+    let headers    = new Headers();
+    let options    = {
+      method: method,
+    };
+
+    console.log(`Rancher version: ${version} api call with authToken: ${self.authToken} for command: ${path}`);
+    if(self.authToken === null) {
+      options['body'] = `username=${self.config.user}@${self.config.realm}&password=${self.config.password}`;
+      headers.append('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8');
+      get(this, 'cookies').remove("PVEAuthCookie");
+    } else {
+
+      if ( 'v2.1.6' === version) {
+        /**
+         * Use this code until next release. 
+         * next release service will remove the hability to use cookies service to send
+         * custom cookies and will add some headers so proxy service pass the apropriate cookie
+         */
+        get(this, 'cookies').setWithOptions("PVEAuthCookie", self.authToken.ticket, {
+          secure: 'auto'
+        });
+      } else {
+        // Something like this should be done on next release of Rancher.
+        headers.append("X-API-Cookie-Header", `PVEAuthCookie=${self.authToken.ticket};`);
+      }
+      headers.append("CSRFPreventionToken", self.authToken.CSRFPreventionToken);
+      headers.append("username", self.authToken.username);
+    }
+
+    options['headers'] = headers;
+    console.log('fetch options: ', options);
+    return fetch(url, options).catch((err) => { console.log('fetch error: ', err); });
   },
   // Any computed properties or custom logic can go here
 });
