@@ -106,13 +106,16 @@
       <div class="row">
         <div class="col span-6">
           <label class="acc-label">Image file</label>
+
           {{new-select
               classNames="form-control"
-              content=isoImages
+              content=imageFiles
               optionLabelPath="volid"
               optionValuePath="volid"
               value=config.imageFile
+              prompt="Select iso image"
           }}
+          {{get imageFiles}}
           <p class="text-info text-small m-0">{{get resourceFields "imageFile.description"}}</p>
         </div>
 

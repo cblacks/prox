@@ -52,7 +52,7 @@ export default Ember.Component.extend(NodeDriver, {
   authToken:       null,
   netModelChoices: NET_MODEL_CHOICES,
   bridges:         [], 
-  isoImages:       [],
+  imageFiles:      [],
 
   init() {
     // This does on the fly template compiling, if you mess with this :cry:
@@ -85,7 +85,7 @@ export default Ember.Component.extend(NodeDriver, {
       cpuCores:               this.fieldDef('cpuCores').default,
       memoryGb:               this.fieldDef('memoryGb').default,
       netModel:               this.fieldDef('netModel').default,
-      netBridge:              this.fieldDef('netBridge').default,
+      netBridge:              '',
       netVlantag:             '',
       pool:                   '',
       guestUername:           '',
@@ -149,57 +149,59 @@ export default Ember.Component.extend(NodeDriver, {
   actions: {
     proxmoxLogin() {
       let self = this;
-      set(self, 'errors', null);
+      var errors = get(self, 'errors') || [];
+      set(self, 'imageFiles', []);
       console.log('Proxmox VE Login.');
-      self.apiRequest('POST', '/access/ticket').then((response) => {
-
-        if(response.status !== 200) {
-          console.log('response status !== 200 [authentication]: ', response.status );
-          return;
-        }
-
-        response.json().then((json) => {
-          console.log('response.json [authentication]: ', json);
-          setProperties(self, {
-            authToken: json.data,
-            step: 2
+      let authToken = get(self, 'authToken');
+      if(authToken === null) {
+        self.apiRequest('POST', '/access/ticket').then((response) => {
+          if(response.status !== 200) {
+            console.log('response status !== 200 [authentication]: ', response.status );
+            return;
+          }
+          response.json().then((json) => {
+            console.log('response.json [authentication]: ', json);
+            setProperties(self, {
+              authToken: json.data,
+              step: 2
+            });
+            self.setImageFiles();
+            self.setNetBridges();
           });
-          self.setNetBridges();
-          self.setIsoStorages();
+        }).catch((err) => {
+          console.log('Authentication error: ', err);
+          errors.push(err);
+          set(self, 'errors', errors);
         });
-
-
-      }).catch((err) => {
-        console.log('Authentication error: ', err);
-      });
+      }
       console.log('end of proxmoxLogin');
-      console.log('schema        : ', get(this, 'schema'));
     },
   },
-  setIsoStorage(storage) {
+  setImageFilesFromStorage(storage) {
     let self = this;
+    var errors = get(self, 'errors') || [];
     self.apiRequest('GET', `/nodes/${self.config.node}/storage/${storage}/content`).then((response) => {
       if(response.status !== 200) {
         console.log('response status !== 200 [storage-contents]: ', response.status );
         return;
       }
       response.json().then((json) => {
-        let storage = json.data.filter(store => store.format === 'iso' && store.content === 'iso');
-        let isoStorage = get(self, 'isoImages');
-        isoStorage.push(...storage);
-        console.log('isoStorage: ', isoStorage);
-        setProperties(self, {
-          isoImages: isoStorage,
-        });
+        let images = json.data.filter(image => image.format === 'iso' && image.content === 'iso');
+        let imageFiles = get(self, 'imageFiles');
+        imageFiles.push(...images);
+        console.log('imageFiles: ', imageFiles);
+        set(self, 'imageFiles', imageFiles);
       });
     }).catch((err) => {
       console.log('Error getting Networks: ', err);
+      errors.push(err);
+      set(self, 'errors', errors);
     });
     console.log('end of setIsoStorage');
-    console.log('schema        : ', get(this, 'schema'));
   },
-  setIsoStorages() {
+  setImageFiles() {
     let self = this;
+    var errors = get(self, 'errors') || [];
     self.apiRequest('GET', `/nodes/${self.config.node}/storage`).then((response) => {
       if(response.status !== 200) {
         console.log('response status !== 200 [storage]: ', response.status );
@@ -208,18 +210,20 @@ export default Ember.Component.extend(NodeDriver, {
       response.json().then((json) => {
         let storage = json.data.filter(store => store.type === 'dir' && store.content.includes('iso'));
         storage.forEach( (store) =>  {
-          self.setIsoStorage(store.storage);
+          self.setImageFilesFromStorage(store.storage);
         });
 
       });
     }).catch((err) => {
       console.log('Error getting Networks: ', err);
+      errors.push(err);
+      set(self, 'errors', errors);
     });
     console.log('end of setIsoStorages');
-    console.log('schema        : ', get(this, 'schema'));
   },
   setNetBridges: function() {
     let self = this;
+    var errors = get(self, 'errors') || [];
     self.apiRequest('GET', `/nodes/${self.config.node}/network`).then((response) => {
       if(response.status !== 200) {
         console.log('response status !== 200 [networks]: ', response.status );
@@ -228,18 +232,23 @@ export default Ember.Component.extend(NodeDriver, {
       response.json().then((json) => {
         let netBridges = json.data.filter(device => device.type === 'bridge');
         console.log('netBridges: ', netBridges);
-        setProperties(self, {
-          bridges: netBridges,
-        });
+        set(self, 'bridges', netBridges);
       });
     }).catch((err) => {
       console.log('Error getting Networks: ', err);
+      errors.push(err);
+      set(self, 'errors', errors);
     });
     console.log('end of setNetBridges');
-    console.log('schema        : ', get(this, 'schema'));
+  },
+  verCompare: function(ver1, ver2) {
+    let intVer1 = ver1.replace(/[v][\.]/, '');
+    let intVer2 = ver2.replace(/[v][\.]/, '');
+    console.log(`Ver1: ${intVer1} Ver2: ${intVer2}`);
   },
   apiRequest: function(method, path) {
     let self       = this;
+    var errors     = get(self, 'errors') || [];
     let version    = `${ get(this, 'settings.rancherVersion') }`;
     let apiUrl     = `${self.config.host}:${self.config.port}/api2/json${path}`;
     let url        = `${ get(this, 'app.proxyEndpoint') }/`;
@@ -255,7 +264,7 @@ export default Ember.Component.extend(NodeDriver, {
       headers.append('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8');
       get(this, 'cookies').remove("PVEAuthCookie");
     } else {
-
+      self.verCompare('v2.1.6' , version);
       if ( 'v2.1.6' === version) {
         /**
          * Use this code until next release. 
@@ -275,7 +284,11 @@ export default Ember.Component.extend(NodeDriver, {
 
     options['headers'] = headers;
     console.log('fetch options: ', options);
-    return fetch(url, options).catch((err) => { console.log('fetch error: ', err); });
+    return fetch(url, options).catch((err) => { 
+      console.log('fetch error: ', err); 
+      errors.push(err);
+      set(self, 'errors', errors);
+    });
   },
   // Any computed properties or custom logic can go here
 });
