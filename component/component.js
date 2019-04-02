@@ -52,7 +52,7 @@ export default Ember.Component.extend(NodeDriver, {
   authToken:       null,
   netModelChoices: NET_MODEL_CHOICES,
   bridges:         [], 
-  imageFiles:      [],
+  imagefiles:      [],
 
   init() {
     // This does on the fly template compiling, if you mess with this :cry:
@@ -150,7 +150,7 @@ export default Ember.Component.extend(NodeDriver, {
     proxmoxLogin() {
       let self = this;
       var errors = get(self, 'errors') || [];
-      set(self, 'imageFiles', []);
+      set(self, 'imagefiles', []);
       console.log('Proxmox VE Login.');
       let authToken = get(self, 'authToken');
       if(authToken === null) {
@@ -177,7 +177,7 @@ export default Ember.Component.extend(NodeDriver, {
       console.log('end of proxmoxLogin');
     },
   },
-  setImageFilesFromStorage(storage) {
+  getImageFilesFromStorage: function(storage, imageList) {
     let self = this;
     var errors = get(self, 'errors') || [];
     self.apiRequest('GET', `/nodes/${self.config.node}/storage/${storage}/content`).then((response) => {
@@ -187,19 +187,16 @@ export default Ember.Component.extend(NodeDriver, {
       }
       response.json().then((json) => {
         let images = json.data.filter(image => image.format === 'iso' && image.content === 'iso');
-        let imageFiles = get(self, 'imageFiles');
-        imageFiles.push(...images);
-        console.log('imageFiles: ', imageFiles);
-        set(self, 'imageFiles', imageFiles);
+        imageList.push(...images);
       });
     }).catch((err) => {
-      console.log('Error getting Networks: ', err);
+      console.log(`Error getting storage "${storage}" Content: ${err}`);
       errors.push(err);
       set(self, 'errors', errors);
     });
-    console.log('end of setIsoStorage');
+    console.log('end of getImageFilesFromStorage');
   },
-  setImageFiles() {
+  setImageFiles: function() {
     let self = this;
     var errors = get(self, 'errors') || [];
     self.apiRequest('GET', `/nodes/${self.config.node}/storage`).then((response) => {
@@ -208,21 +205,23 @@ export default Ember.Component.extend(NodeDriver, {
         return;
       }
       response.json().then((json) => {
-        let storage = json.data.filter(store => store.type === 'dir' && store.content.includes('iso'));
+        let storage   = json.data.filter(store => store.type === 'dir' && store.content.includes('iso'));
+        let imageList = [];
         storage.forEach( (store) =>  {
-          self.setImageFilesFromStorage(store.storage);
+          self.getImageFilesFromStorage(store.storage, imageList);
         });
-
+        console.log('imageList: ', imageList);
+        set(self, 'imagefiles', imageList);
       });
     }).catch((err) => {
       console.log('Error getting Networks: ', err);
       errors.push(err);
       set(self, 'errors', errors);
     });
-    console.log('end of setIsoStorages');
+    console.log('end of setImageFiles');
   },
   setNetBridges: function() {
-    let self = this;
+    let self   = this;
     var errors = get(self, 'errors') || [];
     self.apiRequest('GET', `/nodes/${self.config.node}/network`).then((response) => {
       if(response.status !== 200) {
@@ -231,7 +230,7 @@ export default Ember.Component.extend(NodeDriver, {
       }
       response.json().then((json) => {
         let netBridges = json.data.filter(device => device.type === 'bridge');
-        console.log('netBridges: ', netBridges);
+        console.log('netBridges:  ', netBridges);
         set(self, 'bridges', netBridges);
       });
     }).catch((err) => {
@@ -242,9 +241,12 @@ export default Ember.Component.extend(NodeDriver, {
     console.log('end of setNetBridges');
   },
   verCompare: function(ver1, ver2) {
-    let intVer1 = ver1.replace(/[v][\.]/, '');
-    let intVer2 = ver2.replace(/[v][\.]/, '');
-    console.log(`Ver1: ${intVer1} Ver2: ${intVer2}`);
+    /**
+     * ver1 = ver2 diff = 0
+     * ver1 > ver2 diff > 0
+     * ver1 < ver2 diff < 0
+     */
+    return ver1.replace(/[v\.]/g, '') - ver2.replace(/[v\.]/g, '');
   },
   apiRequest: function(method, path) {
     let self       = this;
@@ -264,8 +266,10 @@ export default Ember.Component.extend(NodeDriver, {
       headers.append('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8');
       get(this, 'cookies').remove("PVEAuthCookie");
     } else {
-      self.verCompare('v2.1.6' , version);
-      if ( 'v2.1.6' === version) {
+      if ( self.verCompare('v2.1.6', version) > 0 ) {
+        // Something like this should be done on next release of Rancher.
+        headers.append("X-API-Cookie-Header", `PVEAuthCookie=${self.authToken.ticket};`);
+      } else {
         /**
          * Use this code until next release. 
          * next release service will remove the hability to use cookies service to send
@@ -274,9 +278,6 @@ export default Ember.Component.extend(NodeDriver, {
         get(this, 'cookies').setWithOptions("PVEAuthCookie", self.authToken.ticket, {
           secure: 'auto'
         });
-      } else {
-        // Something like this should be done on next release of Rancher.
-        headers.append("X-API-Cookie-Header", `PVEAuthCookie=${self.authToken.ticket};`);
       }
       headers.append("CSRFPreventionToken", self.authToken.CSRFPreventionToken);
       headers.append("username", self.authToken.username);

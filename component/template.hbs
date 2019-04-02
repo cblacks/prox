@@ -106,21 +106,19 @@
       <div class="row">
         <div class="col span-6">
           <label class="acc-label">Image file</label>
-
           {{new-select
               classNames="form-control"
-              content=imageFiles
+              content=imagefiles
               optionLabelPath="volid"
               optionValuePath="volid"
               value=config.imageFile
               prompt="Select iso image"
           }}
-          {{get imageFiles}}
           <p class="text-info text-small m-0">{{get resourceFields "imageFile.description"}}</p>
         </div>
 
         <div class="col span-6">
-          <label class="acc-label">Nothing</label>
+          <label class="acc-label">Not defined yet</label>
 
         </div>
       </div>
@@ -181,6 +179,7 @@
               optionLabelPath="iface"
               optionValuePath="iface"
               value=config.netBridge
+              prompt="Select Bridge interface"
           }}
           <p class="text-info text-small m-0">{{get resourceFields "netBridge.description"}}</p>
         </div>
