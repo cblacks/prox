@@ -51,8 +51,8 @@ export default Ember.Component.extend(NodeDriver, {
   step:            1,
   authToken:       null,
   netModelChoices: NET_MODEL_CHOICES,
-  bridges:         [], 
-  imagefiles:      [],
+  bridges:         null,
+  imageFiles:      null,
 
   init() {
     // This does on the fly template compiling, if you mess with this :cry:
@@ -63,7 +63,6 @@ export default Ember.Component.extend(NodeDriver, {
     set(this,'layout', template);
 
     this._super(...arguments);
-
   },
   /*!!!!!!!!!!!DO NOT CHANGE END!!!!!!!!!!!*/
 
@@ -75,12 +74,12 @@ export default Ember.Component.extend(NodeDriver, {
 
     let config = get(this, 'globalStore').createRecord({
       type:                   '%%DRIVERNAME%%Config',
-      user:                   '',
-      realm:                  '',
+      user:                   this.fieldDef('user').default,
+      realm:                  this.fieldDef('realm').default,
       password:               '',
       host:                   '',
       node:                   '',
-      port:                   '',
+      port:                   this.fieldDef('port').default,
       cpuSockets:             this.fieldDef('cpuSockets').default,
       cpuCores:               this.fieldDef('cpuCores').default,
       memoryGb:               this.fieldDef('memoryGb').default,
@@ -99,24 +98,29 @@ export default Ember.Component.extend(NodeDriver, {
     set(this, 'model.%%DRIVERNAME%%Config', config);
     console.log('schema        : ', get(this, 'schema'));
   },
+
   resourceFields: computed('driverName', 'schema', function() {
     if (get(this, 'schema')) {
       return get(this, 'schema').get('resourceFields');
     }
   }),
+
   fieldNames: computed('driverName', 'schema', function() {
     if (get(this, 'schema')) {
       return Object.keys(get(this, 'schema').get('resourceFields'));
     }
   }),
+
   schema: computed('driverName', function() {
     const configName = `${ get(this, 'driverName') }Config`;
     return get(this, 'globalStore').getById('schema', configName.toLowerCase());
   }),
+
   fieldDef: function(fieldName) {
     let fields = get(this, 'resourceFields');
     return fields[fieldName];
   },
+
   // Add custom validation beyond what can be done from the config API schema
   validate() {
     // Get generic API validation errors
@@ -148,111 +152,75 @@ export default Ember.Component.extend(NodeDriver, {
 
   actions: {
     proxmoxLogin() {
-      let self = this;
-      var errors = get(self, 'errors') || [];
-      set(self, 'imagefiles', []);
       console.log('Proxmox VE Login.');
-      let authToken = get(self, 'authToken');
-      if(authToken === null) {
-        self.apiRequest('POST', '/access/ticket').then((response) => {
-          if(response.status !== 200) {
-            console.log('response status !== 200 [authentication]: ', response.status );
-            return;
-          }
-          response.json().then((json) => {
-            console.log('response.json [authentication]: ', json);
-            setProperties(self, {
-              authToken: json.data,
-              step: 2
+
+      set(this, 'step', 2);
+
+      return this.getToken().then(() => {
+        return this.getImageFiles().then((imageFiles) => {
+          return this.getNetBridges().then((bridges) => {
+            setProperties(this, {
+              imageFiles,
+              bridges,
+              step: 3,
             });
-            self.setImageFiles();
-            self.setNetBridges();
           });
-        }).catch((err) => {
-          console.log('Authentication error: ', err);
-          errors.push(err);
-          set(self, 'errors', errors);
         });
-      }
+      }).catch((err) => {
+        setProperties(this, {
+          errors: [err.message],
+          step: 1
+        });
+      });
+
       console.log('end of proxmoxLogin');
     },
   },
-  getImageFilesFromStorage: function(storage, imageList) {
-    let self = this;
-    var errors = get(self, 'errors') || [];
-    self.apiRequest('GET', `/nodes/${self.config.node}/storage/${storage}/content`).then((response) => {
-      if(response.status !== 200) {
-        console.log('response status !== 200 [storage-contents]: ', response.status );
-        return;
-      }
-      response.json().then((json) => {
-        let images = json.data.filter(image => image.format === 'iso' && image.content === 'iso');
-        imageList.push(...images);
-      });
-    }).catch((err) => {
-      console.log(`Error getting storage "${storage}" Content: ${err}`);
-      errors.push(err);
-      set(self, 'errors', errors);
+
+  getToken() {
+    return this.apiRequest('POST', '/access/ticket', true).then((json) => {
+      set(this, 'authToken', json.data);
     });
-    console.log('end of getImageFilesFromStorage');
   },
-  setImageFiles: function() {
-    let self = this;
-    var errors = get(self, 'errors') || [];
-    self.apiRequest('GET', `/nodes/${self.config.node}/storage`).then((response) => {
-      if(response.status !== 200) {
-        console.log('response status !== 200 [storage]: ', response.status );
-        return;
-      }
-      response.json().then((json) => {
-        let storage   = json.data.filter(store => store.type === 'dir' && store.content.includes('iso'));
-        let imageList = [];
-        storage.forEach( (store) =>  {
-          self.getImageFilesFromStorage(store.storage, imageList);
+
+  getImageFiles() {
+    return this.apiRequest('GET', `/nodes/${this.config.node}/storage`).then((json) => {
+      let out = [];
+      let promises = [];
+      let storage = json.data.filter(store => store.type === 'dir' && store.content.includes('iso'));
+      storage.forEach( (store) =>  {
+        promises.push(this.getImageFilesFromStorage(store.storage));
+      });
+
+      return Ember.RSVP.all(promises).then((imageArrays) => {
+        imageArrays.forEach((ary) => {
+          out.pushObjects(ary||[]);
         });
-        console.log('imageList: ', imageList);
-        set(self, 'imagefiles', imageList);
+
+        return out;
       });
-    }).catch((err) => {
-      console.log('Error getting Networks: ', err);
-      errors.push(err);
-      set(self, 'errors', errors);
     });
-    console.log('end of setImageFiles');
   },
-  setNetBridges: function() {
-    let self   = this;
-    var errors = get(self, 'errors') || [];
-    self.apiRequest('GET', `/nodes/${self.config.node}/network`).then((response) => {
-      if(response.status !== 200) {
-        console.log('response status !== 200 [networks]: ', response.status );
-        return;
-      }
-      response.json().then((json) => {
-        let netBridges = json.data.filter(device => device.type === 'bridge');
-        console.log('netBridges:  ', netBridges);
-        set(self, 'bridges', netBridges);
-      });
-    }).catch((err) => {
-      console.log('Error getting Networks: ', err);
-      errors.push(err);
-      set(self, 'errors', errors);
+
+
+  getImageFilesFromStorage(storage) {
+    return this.apiRequest('GET', `/nodes/${this.config.node}/storage/${storage}/content`).then((json) => {
+      let images = json.data.filter(image => image.format === 'iso' && image.content === 'iso');
+      return images;
     });
-    console.log('end of setNetBridges');
+    console.log('end of setIsoStorage');
   },
-  verCompare: function(ver1, ver2) {
-    /**
-     * ver1 = ver2 diff = 0
-     * ver1 > ver2 diff > 0
-     * ver1 < ver2 diff < 0
-     */
-    return ver1.replace(/[v\.]/g, '') - ver2.replace(/[v\.]/g, '');
+
+  getNetBridges: function() {
+    return this.apiRequest('GET', `/nodes/${this.config.node}/network`).then((json) => {
+      let netBridges = json.data.filter(device => device.type === 'bridge');
+      return netBridges;
+    });
   },
-  apiRequest: function(method, path) {
-    let self       = this;
-    var errors     = get(self, 'errors') || [];
+
+  apiRequest: function(method, path, login=false) {
     let version    = `${ get(this, 'settings.rancherVersion') }`;
-    let apiUrl     = `${self.config.host}:${self.config.port}/api2/json${path}`;
+    let apiUrl     = `${this.config.host}:${this.config.port}/api2/json${path}`;
     let url        = `${ get(this, 'app.proxyEndpoint') }/`;
     url           += apiUrl.replace(/^http[s]?:\/\//, '');
     let headers    = new Headers();
@@ -260,36 +228,30 @@ export default Ember.Component.extend(NodeDriver, {
       method: method,
     };
 
-    console.log(`Rancher version: ${version} api call with authToken: ${self.authToken} for command: ${path}`);
-    if(self.authToken === null) {
-      options['body'] = `username=${self.config.user}@${self.config.realm}&password=${self.config.password}`;
+    console.log(`Rancher version: ${version} api call with authToken: ${this.authToken} for command: ${path}`);
+
+    if(login) {
+      options['body'] = `username=${ escape(this.config.user) }@${ escape(this.config.realm) }&password=${ escape(this.config.password) }`;
       headers.append('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8');
       get(this, 'cookies').remove("PVEAuthCookie");
     } else {
-      if ( self.verCompare('v2.1.6', version) > 0 ) {
-        // Something like this should be done on next release of Rancher.
-        headers.append("X-API-Cookie-Header", `PVEAuthCookie=${self.authToken.ticket};`);
-      } else {
-        /**
-         * Use this code until next release. 
-         * next release service will remove the hability to use cookies service to send
-         * custom cookies and will add some headers so proxy service pass the apropriate cookie
-         */
-        get(this, 'cookies').setWithOptions("PVEAuthCookie", self.authToken.ticket, {
-          secure: 'auto'
-        });
-      }
-      headers.append("CSRFPreventionToken", self.authToken.CSRFPreventionToken);
-      headers.append("username", self.authToken.username);
+      get(this, 'cookies').setWithOptions("PVEAuthCookie", this.authToken.ticket, {
+        secure: 'auto'
+      });
+
+      headers.append("X-API-Cookie-Header", `PVEAuthCookie=${this.authToken.ticket};`);
+      headers.append("CSRFPreventionToken", this.authToken.CSRFPreventionToken);
+      headers.append("username", this.authToken.username);
     }
 
     options['headers'] = headers;
     console.log('fetch options: ', options);
-    return fetch(url, options).catch((err) => { 
-      console.log('fetch error: ', err); 
-      errors.push(err);
-      set(self, 'errors', errors);
+    return fetch(url, options).then((response) => {
+      if(response.status === 200) {
+        return response.json();
+      } else {
+        return Ember.RSVP.reject(new Error(`Fetch error: ${ response.status }`));
+      }
     });
   },
-  // Any computed properties or custom logic can go here
 });
