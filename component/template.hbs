@@ -127,8 +127,41 @@
           </div>
 
           <div class="col span-6">
-            <label class="acc-label">Nothing</label>
+            <label class="acc-label">Root Disk Size</label>
+              <div class="input-group">
+                {{input-integer min=1 value=config.disksizeGb classNames="form-control"}}
+                <div class="input-group-addon bg-default">GB</div>
+              </div>
+            <p class="text-info text-small m-0">{{get resourceFields "disksizeGb.description"}}</p> 
+          </div>
+        </div>
 
+        <div class="row">
+          <div class="col span-6">
+            <label class="acc-label">Root Disk Storage</label>
+            {{new-select
+                classNames="form-control"
+                content=storage
+                optionLabelPath="storage"
+                optionValuePath="storage"
+                value=config.storage
+                prompt="Select iso image"
+            }}
+            {{get imageFiles}}
+            <p class="text-info text-small m-0">{{get resourceFields "imageFile.description"}}</p>
+          </div>
+
+          <div class="col span-6">
+            <label class="acc-label">Root Disk Type</label>
+             {{new-select
+                classNames="form-control"
+                content=storageTypeChoices
+                optionLabelPath="name"
+                optionValuePath="value"
+                value=config.storageType
+                prompt="Select Storage Type"
+            }}
+            <p class="text-info text-small m-0">{{get resourceFields "storageType.description"}}</p> 
           </div>
         </div>
       {{/accordion-list-item}}

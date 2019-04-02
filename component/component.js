@@ -7,52 +7,63 @@ const LAYOUT;
 /*!!!!!!!!!!!DO NOT CHANGE END!!!!!!!!!!!*/
 
 const NET_MODEL_CHOICES = [
-  {
-    'name':  'Intel e1000',
-    'value': 'e1000'
-  },
-  {
-    'name':  'virtio (Paravirtualized)',
-    'value': 'virtio'
-  },  
-  {
-    'name':  'Realtek RTL8139',
-    'value': 'rtl8139'
-  },
-  {
-    'name':  'VMware vmxnet3',
-    'value': 'vmxnet3'
-  },
+  { 'name':  'Intel e1000',              'value': 'e1000'   },
+  { 'name':  'virtio (Paravirtualized)', 'value': 'virtio'  },  
+  { 'name':  'Realtek RTL8139',          'value': 'rtl8139' },
+  { 'name':  'VMware vmxnet3',           'value': 'vmxnet3' },
+];
+
+const STORAGE_TYPE_CHOICES = [
+  { 'name': 'QCOW2', 'value': 'qcow2' },
+  { 'name': 'RAW',   'value': 'raw'   },
+]; 
+
+// Not sure if we are going to set FS TYPES.... Just in case will leave this const here.
+const FS_TYPE_CHOICES = [
+  { 'name': 'Ceph FS',      'value': 'cephfs'      },
+  { 'name': 'Cifs',         'value': 'cifs'        },
+  { 'name': 'Directory',    'value': 'dir'         },
+  { 'name': 'DRDB',         'value': 'drdb'        },
+  { 'name': 'Fake',         'value': 'fake'        },
+  { 'name': 'Gluster FS',   'value': 'glusterfs'   },
+  { 'name': 'iSCSI',        'value': 'iscsi'       },
+  { 'name': 'iSCSI Direct', 'value': 'iscsidirect' },
+  { 'name': 'LVM',          'value': 'lvm'         },
+  { 'name': 'LVM Thin',     'value': 'lvmthin'     },
+  { 'name': 'NFS',          'value': 'nfs'         },
+  { 'name': 'RBD',          'value': 'rbd'         },
+  { 'name': 'Sheepdog',     'value': 'sheepdog'    },
+  { 'name': 'ZFS',          'value': 'zfs'         },
+  { 'name': 'ZFS Pool',     'value': 'zfspool'     },
 ];
 
 /*!!!!!!!!!!!GLOBAL CONST START!!!!!!!!!!!*/
 // EMBER API Access - if you need access to any of the Ember API's add them here in the same manner rather then import them via modules, since the dependencies exist in rancher we dont want to expor the modules in the amd def
-const computed     = Ember.computed;
-const get          = Ember.get;
-const set          = Ember.set;
-const alias        = Ember.computed.alias;
-const service      = Ember.inject.service;
+const computed      = Ember.computed;
+const get           = Ember.get;
+const set           = Ember.set;
+const alias         = Ember.computed.alias;
+const service       = Ember.inject.service;
 
 const setProperties = Ember.setProperties;
 
-const defaultRadix = 10;
-const defaultBase  = 1024;
 /*!!!!!!!!!!!GLOBAL CONST END!!!!!!!!!!!*/
-
-
 
 /*!!!!!!!!!!!DO NOT CHANGE START!!!!!!!!!!!*/
 export default Ember.Component.extend(NodeDriver, {
-  driverName:     '%%DRIVERNAME%%',
-  config:          alias('model.%%DRIVERNAME%%Config'),
-  app:             service(),
-  cookies:         service(),
-  settings:        service(),
-  step:            1,
-  authToken:       null,
-  netModelChoices: NET_MODEL_CHOICES,
-  bridges:         null,
-  imageFiles:      null,
+  driverName:        '%%DRIVERNAME%%',
+  config:             alias('model.%%DRIVERNAME%%Config'),
+  app:                service(),
+  cookies:            service(),
+  settings:           service(),
+  step:               1,
+  authToken:          null,
+  netModelChoices:    NET_MODEL_CHOICES,
+  storageTypeChoices: STORAGE_TYPE_CHOICES,
+  bridges:            null,
+  imageFiles:         null,
+  storage:            null,
+  storageType:        null,
 
   init() {
     // This does on the fly template compiling, if you mess with this :cry:
@@ -93,6 +104,9 @@ export default Ember.Component.extend(NodeDriver, {
       guestSshPublicKey:      '',
       guestSshAuthorizedKeys: '',
       imageFile:              '',
+      disksizeGb:             this.fieldDef('disksizeGb').default,
+      storage:                this.fieldDef('storage').default,
+      storageType:            this.fieldDef('storageType').default,
     });
 
     set(this, 'model.%%DRIVERNAME%%Config', config);
@@ -153,16 +167,17 @@ export default Ember.Component.extend(NodeDriver, {
   actions: {
     proxmoxLogin() {
       console.log('Proxmox VE Login.');
-
       set(this, 'step', 2);
-
       return this.getToken().then(() => {
         return this.getImageFiles().then((imageFiles) => {
-          return this.getNetBridges().then((bridges) => {
-            setProperties(this, {
-              imageFiles,
-              bridges,
-              step: 3,
+          return this.getNetBridges().then((bridges) =>  {
+            return this.getDiskStorageLocation().then((storage) => {
+              setProperties(this, {
+                imageFiles,
+                bridges,
+                storage, 
+                step: 3,
+              });
             });
           });
         });
@@ -172,8 +187,6 @@ export default Ember.Component.extend(NodeDriver, {
           step: 1
         });
       });
-
-      console.log('end of proxmoxLogin');
     },
   },
 
@@ -187,6 +200,7 @@ export default Ember.Component.extend(NodeDriver, {
     return this.apiRequest('GET', `/nodes/${this.config.node}/storage`).then((json) => {
       let out = [];
       let promises = [];
+      console.log('storages: ', json.data);
       let storage = json.data.filter(store => store.type === 'dir' && store.content.includes('iso'));
       storage.forEach( (store) =>  {
         promises.push(this.getImageFilesFromStorage(store.storage));
@@ -202,13 +216,18 @@ export default Ember.Component.extend(NodeDriver, {
     });
   },
 
+  getDiskStorageLocation() {
+    return this.apiRequest('GET', `/nodes/${this.config.node}/storage/`).then((json) => {
+      let storage = json.data.filter(store => store.content.includes('images') && store.content.includes('rootdir'));
+      return storage;
+    });
+  },
 
   getImageFilesFromStorage(storage) {
     return this.apiRequest('GET', `/nodes/${this.config.node}/storage/${storage}/content`).then((json) => {
       let images = json.data.filter(image => image.format === 'iso' && image.content === 'iso');
       return images;
     });
-    console.log('end of setIsoStorage');
   },
 
   getNetBridges: function() {
