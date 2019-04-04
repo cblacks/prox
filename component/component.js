@@ -64,6 +64,8 @@ export default Ember.Component.extend(NodeDriver, {
   imageFiles:         null,
   storage:            null,
   storageType:        null,
+  domains:            null,
+  nodes:              null,
 
   init() {
     // This does on the fly template compiling, if you mess with this :cry:
@@ -72,7 +74,6 @@ export default Ember.Component.extend(NodeDriver, {
       moduleName: 'nodes/components/driver-%%DRIVERNAME%%/template'
     });
     set(this,'layout', template);
-
     this._super(...arguments);
   },
   /*!!!!!!!!!!!DO NOT CHANGE END!!!!!!!!!!!*/
@@ -98,7 +99,7 @@ export default Ember.Component.extend(NodeDriver, {
       netBridge:              '',
       netVlantag:             '',
       pool:                   '',
-      guestUername:           '',
+      guestUsername:          '',
       guestPassword:          '',
       guestSshPrivateKey:     '',
       guestSshPublicKey:      '',
@@ -107,6 +108,9 @@ export default Ember.Component.extend(NodeDriver, {
       disksizeGb:             this.fieldDef('disksizeGb').default,
       storage:                this.fieldDef('storage').default,
       storageType:            this.fieldDef('storageType').default,
+      driverDebug:            true,
+      restyDebug:             true,
+
     });
 
     set(this, 'model.%%DRIVERNAME%%Config', config);
@@ -188,6 +192,28 @@ export default Ember.Component.extend(NodeDriver, {
         });
       });
     },
+    preFetchBaseData() {
+      return this.getDomains().then((domains) => {
+        setProperties(this, {
+          domains,
+          'errors': null,
+        });
+      }).catch((err) => {
+        set(this, 'errors', [err.message]);
+      });
+    },
+  },
+
+  getDomains() {
+    return this.apiRequest('GET', '/access/domains', false, false).then((json) => {
+      return json.data.map(domain => {
+        return { 
+          name: `${domain.realm} - ${domain.comment}`, 
+          value: domain.realm,
+          default: domain.default
+        }
+      });
+    });
   },
 
   getToken() {
@@ -198,10 +224,10 @@ export default Ember.Component.extend(NodeDriver, {
 
   getImageFiles() {
     return this.apiRequest('GET', `/nodes/${this.config.node}/storage`).then((json) => {
-      let out = [];
+      let out      = [];
       let promises = [];
       console.log('storages: ', json.data);
-      let storage = json.data.filter(store => store.type === 'dir' && store.content.includes('iso'));
+      let storage  = json.data.filter(store => store.type === 'dir' && store.content.includes('iso'));
       storage.forEach( (store) =>  {
         promises.push(this.getImageFilesFromStorage(store.storage));
       });
@@ -237,7 +263,7 @@ export default Ember.Component.extend(NodeDriver, {
     });
   },
 
-  apiRequest: function(method, path, login=false) {
+  apiRequest: function(method, path, login=false, sendHeaders=true) {
     let version    = `${ get(this, 'settings.rancherVersion') }`;
     let apiUrl     = `${this.config.host}:${this.config.port}/api2/json${path}`;
     let url        = `${ get(this, 'app.proxyEndpoint') }/`;
@@ -248,20 +274,21 @@ export default Ember.Component.extend(NodeDriver, {
     };
 
     console.log(`Rancher version: ${version} api call with authToken: ${this.authToken} for command: ${path}`);
-
-    if(login) {
-      options['body'] = `username=${ escape(this.config.user) }@${ escape(this.config.realm) }&password=${ escape(this.config.password) }`;
-      headers.append('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8');
-      get(this, 'cookies').remove("PVEAuthCookie");
-    } else {
-      get(this, 'cookies').setWithOptions("PVEAuthCookie", this.authToken.ticket, {
-        secure: 'auto'
-      });
-
-      headers.append("X-API-Cookie-Header", `PVEAuthCookie=${this.authToken.ticket};`);
-      headers.append("CSRFPreventionToken", this.authToken.CSRFPreventionToken);
-      headers.append("username", this.authToken.username);
-    }
+    if(sendHeaders) {
+      if(login) {
+        options['body'] = `username=${ escape(this.config.user) }@${ escape(this.config.realm) }&password=${ escape(this.config.password) }`;
+        headers.append('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8');
+        get(this, 'cookies').remove("PVEAuthCookie");
+      } else {
+        get(this, 'cookies').setWithOptions("PVEAuthCookie", this.authToken.ticket, {
+          secure: 'auto'
+        });
+  
+        headers.append("X-API-Cookie-Header", `PVEAuthCookie=${this.authToken.ticket};`);
+        headers.append("CSRFPreventionToken", this.authToken.CSRFPreventionToken);
+        headers.append("username", this.authToken.username);
+      }
+    }    
 
     options['headers'] = headers;
     console.log('fetch options: ', options);
@@ -269,7 +296,7 @@ export default Ember.Component.extend(NodeDriver, {
       if(response.status === 200) {
         return response.json();
       } else {
-        return Ember.RSVP.reject(new Error(`Fetch error: ${ response.status }`));
+        return Ember.RSVP.reject(new Error(`Error (${response.status}): ${response.statusText}`));
       }
     });
   },
