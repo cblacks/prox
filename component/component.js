@@ -37,6 +37,14 @@ const FS_TYPE_CHOICES = [
   { 'name': 'ZFS Pool',     'value': 'zfspool'     },
 ];
 
+const CPU_TYPE_CHOICES = [
+  { 'name': 'kvm32',   'value': 'kvm32'   },
+  { 'name': 'kvm64',   'value': 'kvm64'   },
+  { 'name': 'quemu32', 'value': 'quemu32' },
+  { 'name': 'quemu64', 'value': 'quemu64' },
+  { 'name': 'host',    'value': 'host'    },
+
+];
 /*!!!!!!!!!!!GLOBAL CONST START!!!!!!!!!!!*/
 // EMBER API Access - if you need access to any of the Ember API's add them here in the same manner rather then import them via modules, since the dependencies exist in rancher we dont want to expor the modules in the amd def
 const computed      = Ember.computed;
