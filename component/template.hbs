@@ -213,21 +213,21 @@
 
         <div class="row">
           <div class="col span-4">
-            <label class="acc-label">{{input type="checkbox" value=config.cpuNuma classNames="form-control"}} NUMA </label>
+            <label class="acc-label">{{input type="checkbox" checked=config.cpuNuma classNames="form-control"}} NUMA </label>
             <p class="text-info text-small m-0">{{get resourceFields "cpuNuma.description"}}</p>
           </div>
 
           <div class="col span-4">
-            <label class="acc-label">{{input type="checkbox" value=config.cpuPcid classNames="form-control"}} PCID</label>  
+            <label class="acc-label">{{input type="checkbox" checked=config.cpuPcid classNames="form-control"}} PCID</label>  
             <p class="text-info text-small m-0">{{get resourceFields "cpuPcid.description"}}</p>
           </div>
 
           <div class="col span-4">
-            <label class="acc-label">{{input type="checkbox" value=config.cpuSpecCtrl classNames="form-control"}} SPEC-CTRL</label>
+            <label class="acc-label">{{input type="checkbox" checked=config.cpuSpecCtrl classNames="form-control"}} SPEC-CTRL</label>
             <p class="text-info text-small m-0">{{get resourceFields "cpuSpecCtrl.description"}}</p>
           </div>
         </div>
-        
+
         <div class="row">
           <div class="col span-6">
            <label class="acc-label">Memory Size</label>
