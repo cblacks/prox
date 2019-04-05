@@ -68,6 +68,7 @@ export default Ember.Component.extend(NodeDriver, {
   authToken:          null,
   netModelChoices:    NET_MODEL_CHOICES,
   storageTypeChoices: STORAGE_TYPE_CHOICES,
+  cpuTypeChoices:     CPU_TYPE_CHOICES,
   bridges:            null,
   imageFiles:         null,
   storage:            null,
@@ -118,7 +119,10 @@ export default Ember.Component.extend(NodeDriver, {
       storageType:            this.fieldDef('storageType').default,
       driverDebug:            true,
       restyDebug:             true,
-
+      cpuType:                this.fieldDef('cpuType').default,
+      cpuNuma:                false,
+      cpuPcid:                false,
+      cpuSpecCtrl:            false,
     });
 
     set(this, 'model.%%DRIVERNAME%%Config', config);

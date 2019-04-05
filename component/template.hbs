@@ -180,7 +180,7 @@
             expandOnInit=true
       }}
         <div class="row">
-          <div class="col span-3">
+          <div class="col span-4">
             <label class="acc-label">CPU</label>
             <div class="input-group">
               {{input-integer min=1 value=config.cpuSockets classNames="form-control"}}
@@ -189,7 +189,7 @@
             <p class="text-info text-small m-0">{{get resourceFields "cpuSockets.description"}}</p>
           </div>
 
-          <div class="col span-3">
+          <div class="col span-4">
               <label class="acc-label">&nbsp;</label>
               <div class="input-group">
                 {{input-integer min=1 value=config.cpuCores classNames="form-control"}}
@@ -198,7 +198,7 @@
               <p class="text-info text-small m-0">{{get resourceFields "cpuCores.description"}}</p>
           </div>
 
-          <div class="col span-6">
+          <div class="col span-4">
             <label class="acc-label">Memory Size</label>
             <div class="input-group">
               {{input-integer min=1 value=config.memoryGb classNames="form-control"}}
@@ -208,6 +208,39 @@
           </div>
         </div>
 
+        <div class="row">
+          <div class="col span-6">
+            <label class="acc-label">Type</label>
+            {{new-select
+                classNames="form-control"
+                content=cpuTypeChoices
+                optionLabelPath="iface"
+                optionValuePath="iface"
+                value=config.cpuType
+            }}
+            <p class="text-info text-small m-0">{{get resourceFields "cpuType.description"}}</p>
+
+          <div class="col span-6">
+             &nbsp;
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col span-4">
+            <label class="acc-label">{{input type="checkbox" value=config.cpuNuma classNames="form-control"}} NUMA </label>
+            <p class="text-info text-small m-0">{{get resourceFields "cpuNuma.description"}}</p>
+          </div>
+
+          <div class="col span-4">
+            <label class="acc-label">{{input type="checkbox" value=config.cpuPcid classNames="form-control"}} PCID</label>  
+            <p class="text-info text-small m-0">{{get resourceFields "cpuPcid.description"}}</p>
+          </div>
+
+          <div class="col span-4">
+            <label class="acc-label">{{input type="checkbox" value=config.cpuSpecCtrl classNames="form-control"}} SPEC-CTRL</label>
+            <p class="text-info text-small m-0">{{get resourceFields "cpuSpecCtrl.description"}}</p>
+          </div>
+        </div>
       {{/accordion-list-item}}
 
       {{#accordion-list-item
