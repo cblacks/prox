@@ -212,21 +212,6 @@
         </div>
 
         <div class="row">
-          <div class="col span-6">
-           <label class="acc-label">Memory Size</label>
-            <div class="input-group">
-              {{input-integer min=1 value=config.memoryGb classNames="form-control"}}
-              <div class="input-group-addon bg-default">GB</div>
-            </div>
-            <p class="text-info text-small m-0">{{get resourceFields "memoryGb.description"}}</p>
-          </div>
-
-          <div class="col span-6">
-             &nbsp;
-          </div>
-        </div>
-
-        <div class="row">
           <div class="col span-4">
             <label class="acc-label">{{input type="checkbox" value=config.cpuNuma classNames="form-control"}} NUMA </label>
             <p class="text-info text-small m-0">{{get resourceFields "cpuNuma.description"}}</p>
@@ -240,6 +225,21 @@
           <div class="col span-4">
             <label class="acc-label">{{input type="checkbox" value=config.cpuSpecCtrl classNames="form-control"}} SPEC-CTRL</label>
             <p class="text-info text-small m-0">{{get resourceFields "cpuSpecCtrl.description"}}</p>
+          </div>
+        </div>
+        
+        <div class="row">
+          <div class="col span-6">
+           <label class="acc-label">Memory Size</label>
+            <div class="input-group">
+              {{input-integer min=1 value=config.memoryGb classNames="form-control"}}
+              <div class="input-group-addon bg-default">GB</div>
+            </div>
+            <p class="text-info text-small m-0">{{get resourceFields "memoryGb.description"}}</p>
+          </div>
+
+          <div class="col span-6">
+             &nbsp;
           </div>
         </div>
       {{/accordion-list-item}}
