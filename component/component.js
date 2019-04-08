@@ -146,7 +146,6 @@ export default Ember.Component.extend(NodeDriver, {
     return get(this, 'globalStore').getById('schema', configName.toLowerCase());
   }),
 
-
   encodeSshAuthorizedKeys: computed('driverName', 'config', function() {
     return encodeURIComponent(this.config.guestSshAuthorizedKeys);
   }),
@@ -231,6 +230,8 @@ export default Ember.Component.extend(NodeDriver, {
       console.log(`sshAuthKeys        = ${sshAuthKeys}`);
       console.log(`encodedSshAuthKeys = ${encodedSshAuthKeys}`);
       set(this, 'config.guestSshAuthorizedKeys', encodedSshAuthKeys);
+      let cfg = get(this, 'model.%%DRIVERNAME%%Config');
+      get.save();
     }
   },
 
