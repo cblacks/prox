@@ -112,7 +112,7 @@ export default Ember.Component.extend(NodeDriver, {
       guestPassword:          '',
       guestSshPrivateKey:     '',
       guestSshPublicKey:      '',
-      guestSshAuthorizedKeys: '',
+      guestSshAuthorizedKeys: get(this, 'decodeSshAuthorizedKeys'),
       imageFile:              '',
       disksizeGb:             this.fieldDef('disksizeGb').default,
       storage:                this.fieldDef('storage').default,
@@ -226,7 +226,6 @@ export default Ember.Component.extend(NodeDriver, {
 
     saveData(cb) {
       set(this, 'config.guestSshAuthorizedKeys', get(this, 'encodeSshAuthorizedKeys'));
-      console.log('encodeSshAuthorizedKeys: ', get(this, 'config.guestSshAuthorizedKeys'));
       cb();
     }
   },
