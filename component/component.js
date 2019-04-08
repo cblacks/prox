@@ -214,6 +214,14 @@ export default Ember.Component.extend(NodeDriver, {
         set(this, 'errors', [err.message]);
       });
     },
+    saveData() {
+      let sshAuthKeys = get(this, 'guestSshAuthorizedKeys');
+      let encodedSshAuthKeys = encodeURIComponent(sshAuthKeys);
+      console.log(`sshAuthKeys        = ${sshAuthKeys}`);
+      console.log(`encodedSshAuthKeys = ${encodedSshAuthKeys}`);
+      set(this, 'guestSshAuthorizedKeys', encodedSshAuthKeys);
+      this.config.save();
+    }
   },
 
   getDomains() {
