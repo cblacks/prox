@@ -231,7 +231,7 @@ export default Ember.Component.extend(NodeDriver, {
       console.log(`encodedSshAuthKeys = ${encodedSshAuthKeys}`);
       set(this, 'config.guestSshAuthorizedKeys', encodedSshAuthKeys);
       let cfg = get(this, 'model.%%DRIVERNAME%%Config');
-      get.save();
+      cfg.save();
     }
   },
 
