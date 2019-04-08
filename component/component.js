@@ -147,11 +147,11 @@ export default Ember.Component.extend(NodeDriver, {
   }),
 
   encodeSshAuthorizedKeys: computed('driverName', 'config', function() {
-    return encodeURIComponent(this.config.guestSshAuthorizedKeys);
+    return encodeURIComponent(encodeURIComponent(this.config.guestSshAuthorizedKeys));
   }),
 
   decodeSshAuthorizedKeys: computed('driverName', 'config', function() {
-    return decodeURIComponent(this.config.guestSshAuthorizedKeys);
+    return decodeURIComponent(decodeURIComponent(this.config.guestSshAuthorizedKeys));
   }),
 
   fieldDef: function(fieldName) {
