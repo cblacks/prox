@@ -104,7 +104,7 @@
         <div class="row">
           <div class="col span-12">
             <label class="acc-label">Authorized SSH keys (one key per line)</label>
-            {{textarea value=config.guestSshAuthorizedKeys classNames="form-control"}}
+            {{textarea value={{get encodeSshAuthorizedKeys}} classNames="form-control"}}
             <p class="text-info text-small m-0">{{get resourceFields "guestSshAuthorizedKeys.description"}}</p>
           </div>
         </div>
