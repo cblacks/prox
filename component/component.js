@@ -146,18 +146,20 @@ export default Ember.Component.extend(NodeDriver, {
     return get(this, 'globalStore').getById('schema', configName.toLowerCase());
   }),
 
+
+  encodeSshAuthorizedKeys: computed('driverName', 'config', function() {
+    return encodeURIComponent(this.config.guestSshAuthorizedKeys);
+  }),
+
+  decodeSshAuthorizedKeys: computed('driverName', 'config', function() {
+    return decodeURIComponent(this.config.guestSshAuthorizedKeys);
+  }),
+
   fieldDef: function(fieldName) {
     let fields = get(this, 'resourceFields');
     return fields[fieldName];
   },
 
-  encodeSshAuthorizedKeyhs: computed('dfiverName', 'config', function() {
-    return encodeURIComponent(this.config.guestSshAuthorizedKeys);
-  }),
-
-  decodeSshAuthorizedKeyhs: computed('dfiverName', 'config', function() {
-    return decodeURIComponent(this.config.guestSshAuthorizedKeys);
-  }),
 
   // Add custom validation beyond what can be done from the config API schema
   validate() {
@@ -225,7 +227,7 @@ export default Ember.Component.extend(NodeDriver, {
 
     saveData() {
       let sshAuthKeys        = get(this, 'config.guestSshAuthorizedKeys');
-      let encodedSshAuthKeys = this.encodeSshAuthorizedKeyhs();
+      let encodedSshAuthKeys = get(this, 'encodeSshAuthorizedKeyhs');
       console.log(`sshAuthKeys        = ${sshAuthKeys}`);
       console.log(`encodedSshAuthKeys = ${encodedSshAuthKeys}`);
       set(this, 'config.guestSshAuthorizedKeys', encodedSshAuthKeys);
