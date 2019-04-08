@@ -151,6 +151,14 @@ export default Ember.Component.extend(NodeDriver, {
     return fields[fieldName];
   },
 
+  encodeSshAuthorizedKeyhs: computed('dfiverName', 'config', function() {
+    return encodeURIComponent(this.config.guestSshAuthorizedKeys);
+  }),
+
+  decodeSshAuthorizedKeyhs: computed('dfiverName', 'config', function() {
+    return decodeURIComponent(this.config.guestSshAuthorizedKeys);
+  }),
+
   // Add custom validation beyond what can be done from the config API schema
   validate() {
     // Get generic API validation errors
@@ -214,9 +222,10 @@ export default Ember.Component.extend(NodeDriver, {
         set(this, 'errors', [err.message]);
       });
     },
+
     saveData() {
-      let sshAuthKeys = get(this, 'config.guestSshAuthorizedKeys');
-      let encodedSshAuthKeys = encodeURIComponent(sshAuthKeys);
+      let sshAuthKeys        = get(this, 'config.guestSshAuthorizedKeys');
+      let encodedSshAuthKeys = this.encodeSshAuthorizedKeyhs();
       console.log(`sshAuthKeys        = ${sshAuthKeys}`);
       console.log(`encodedSshAuthKeys = ${encodedSshAuthKeys}`);
       set(this, 'config.guestSshAuthorizedKeys', encodedSshAuthKeys);
@@ -230,7 +239,7 @@ export default Ember.Component.extend(NodeDriver, {
           name: `${domain.realm} - ${domain.comment}`, 
           value: domain.realm,
           default: domain.default
-        }
+        };
       });
     });
   },
