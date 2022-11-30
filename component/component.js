@@ -1,3 +1,4 @@
+// noinspection JSVoidFunctionReturnValueUsed
 /*!!!!!!!!!!!Do not change anything between here (the DRIVERNAME placeholder will be automatically replaced at buildtime)!!!!!!!!!!!*/
 import NodeDriver from 'shared/mixins/node-driver';
 
@@ -7,8 +8,8 @@ const LAYOUT;
 /*!!!!!!!!!!!DO NOT CHANGE END!!!!!!!!!!!*/
 
 const NET_MODEL_CHOICES = [
+  { 'name':  'virtio (Paravirtualized)', 'value': 'virtio'  },
   { 'name':  'Intel e1000',              'value': 'e1000'   },
-  { 'name':  'virtio (Paravirtualized)', 'value': 'virtio'  },  
   { 'name':  'Realtek RTL8139',          'value': 'rtl8139' },
   { 'name':  'VMware vmxnet3',           'value': 'vmxnet3' },
 ];
@@ -16,7 +17,7 @@ const NET_MODEL_CHOICES = [
 const STORAGE_TYPE_CHOICES = [
   { 'name': 'QCOW2', 'value': 'qcow2' },
   { 'name': 'RAW',   'value': 'raw'   },
-]; 
+];
 
 // Not sure if we are going to set FS TYPES.... Just in case will leave this const here.
 const FS_TYPE_CHOICES = [
@@ -38,11 +39,11 @@ const FS_TYPE_CHOICES = [
 ];
 
 const CPU_TYPE_CHOICES = [
+  { 'name': 'host',    'value': 'host'    },
   { 'name': 'kvm32',   'value': 'kvm32'   },
   { 'name': 'kvm64',   'value': 'kvm64'   },
   { 'name': 'quemu32', 'value': 'quemu32' },
   { 'name': 'quemu64', 'value': 'quemu64' },
-  { 'name': 'host',    'value': 'host'    },
 
 ];
 /*!!!!!!!!!!!GLOBAL CONST START!!!!!!!!!!!*/
@@ -70,6 +71,7 @@ export default Ember.Component.extend(NodeDriver, {
   storageTypeChoices: STORAGE_TYPE_CHOICES,
   cpuTypeChoices:     CPU_TYPE_CHOICES,
   bridges:            null,
+  vmTemplates:        null,
   imageFiles:         null,
   storage:            null,
   storageType:        null,
@@ -95,38 +97,61 @@ export default Ember.Component.extend(NodeDriver, {
 
     let config = get(this, 'globalStore').createRecord({
       type:                   '%%DRIVERNAME%%Config',
-      user:                   this.fieldDef('user').default,
-      realm:                  this.fieldDef('realm').default,
-      password:               '',
-      host:                   '',
-      node:                   '',
-      port:                   this.fieldDef('port').default,
-      cpuSockets:             this.fieldDef('cpuSockets').default,
-      cpuCores:               this.fieldDef('cpuCores').default,
-      memoryGb:               this.fieldDef('memoryGb').default,
-      netModel:               this.fieldDef('netModel').default,
-      netBridge:              '',
-      netVlantag:             '',
-      pool:                   '',
-      guestUsername:          '',
-      guestPassword:          '',
-      guestSshPrivateKey:     '',
-      guestSshPublicKey:      '',
-      guestSshAuthorizedKeys: get(this, 'decodeSshAuthorizedKeys'),
-      imageFile:              '',
-      disksizeGb:             this.fieldDef('disksizeGb').default,
-      storage:                this.fieldDef('storage').default,
-      storageType:            this.fieldDef('storageType').default,
-      driverDebug:            true,
-      restyDebug:             true,
-      cpuType:                this.fieldDef('cpuType').default,
-      cpuNuma:                false,
-      cpuPcid:                false,
-      cpuSpecCtrl:            false,
+      proxmoxUserName:                   this.fieldDef('proxmoxUserName').default,
+      proxmoxRealm:                  this.fieldDef('proxmoxRealm').default,
+      proxmoxUserPassword:               '',
+      proxmoxHost:                   '',
+      proxmoxNode: "",
+
+      vmStoragePath: "",
+      vmStorageSize: "",
+      vmStorageType: "",
+      vmCloneVmid: "",
+
+      vmCpu: "",
+      vmCpuCores: "1",
+      vmCpuSockets: "2",
+      vmMemory: "4",
+
+      vmNetModel: "virtio",
+      vmNetBridge: "",
+      vmNetTag: "",
+      vmNetMtu: "",
+
+      //TODO: helper to deal with these int boolean fields
+      vmNetFirewall: "",
+      vmStartOnboot: "1",
+      vmProtection: "",
+      vmCloneFull: "1",
+      vmNuma: "",
+
+      // Default and hardcoded values
+      debugDriver: false,
+      debugResty: false,
+      provisionStrategy: "clone",
+
+      proxmoxPool: "",
+      sshPassword: "",
+      sshPort: "22",
+      sshUsername: "docker-machine",
+
+      vmCienabled: "1",
+      vmCitype: "nocloud",
+      vmImageFile: "",
+
+      vmScsiAttributes: "",
+      vmScsiController: "virtio-scsi-pci",
+
+      vmVmidRange: "",
     });
 
     set(this, 'model.%%DRIVERNAME%%Config', config);
-    console.log('schema        : ', get(this, 'schema'));
+
+    //TODO: Prefetch data if we're editing
+    // if (is edit) {
+    //   console.log('prefetching data.......');
+    //   this.preFetchBaseData();
+    // }
   },
 
   resourceFields: computed('driverName', 'schema', function() {
@@ -194,13 +219,13 @@ export default Ember.Component.extend(NodeDriver, {
       console.log('Proxmox VE Login.');
       set(this, 'step', 2);
       return this.getToken().then(() => {
-        return this.getImageFiles().then((imageFiles) => {
+        return this.getVMTemplates().then((vmTemplates) => {
           return this.getNetBridges().then((bridges) =>  {
             return this.getDiskStorageLocation().then((storage) => {
               setProperties(this, {
-                imageFiles,
+                vmTemplates,
                 bridges,
-                storage, 
+                storage,
                 step: 3,
               });
             });
@@ -233,8 +258,8 @@ export default Ember.Component.extend(NodeDriver, {
   getDomains() {
     return this.apiRequest('GET', '/access/domains', false, false).then((json) => {
       return json.data.map(domain => {
-        return { 
-          name: `${domain.realm} - ${domain.comment}`, 
+        return {
+          name: `${domain.realm} - ${domain.comment}`,
           value: domain.realm,
           default: domain.default
         };
@@ -248,8 +273,19 @@ export default Ember.Component.extend(NodeDriver, {
     });
   },
 
+  getVMTemplates() {
+    return this.apiRequest('GET', `/cluster/resources`).then((json) => {
+      return json.data.filter(template => template.template === 1 && template.node === this.config.proxmoxNode).map(function(template){
+        return {
+          name: `${template.vmid} - ${template.name}`,
+          vmid: template.vmid.toString()
+        };
+      });
+    });
+  },
+
   getImageFiles() {
-    return this.apiRequest('GET', `/nodes/${this.config.node}/storage`).then((json) => {
+    return this.apiRequest('GET', `/nodes/${this.config.proxmoxNode}/storage`).then((json) => {
       let out      = [];
       let promises = [];
       console.log('storages: ', json.data);
@@ -269,21 +305,21 @@ export default Ember.Component.extend(NodeDriver, {
   },
 
   getDiskStorageLocation() {
-    return this.apiRequest('GET', `/nodes/${this.config.node}/storage/`).then((json) => {
+    return this.apiRequest('GET', `/nodes/${this.config.proxmoxNode}/storage/`).then((json) => {
       let storage = json.data.filter(store => store.content.includes('images') && store.content.includes('rootdir'));
       return storage;
     });
   },
 
   getImageFilesFromStorage(storage) {
-    return this.apiRequest('GET', `/nodes/${this.config.node}/storage/${storage}/content`).then((json) => {
+    return this.apiRequest('GET', `/nodes/${this.config.proxmoxNode}/storage/${storage}/content`).then((json) => {
       let images = json.data.filter(image => image.format === 'iso' && image.content === 'iso');
       return images;
     });
   },
 
   getNetBridges: function() {
-    return this.apiRequest('GET', `/nodes/${this.config.node}/network`).then((json) => {
+    return this.apiRequest('GET', `/nodes/${this.config.proxmoxNode}/network`).then((json) => {
       let netBridges = json.data.filter(device => device.type === 'bridge');
       return netBridges;
     });
@@ -291,7 +327,7 @@ export default Ember.Component.extend(NodeDriver, {
 
   apiRequest: function(method, path, login=false, sendHeaders=true) {
     let version    = `${ get(this, 'settings.rancherVersion') }`;
-    let apiUrl     = `${this.config.host}:${this.config.port}/api2/json${path}`;
+    let apiUrl     = `${this.config.proxmoxHost}:8006/api2/json${path}`;
     let url        = `${ get(this, 'app.proxyEndpoint') }/`;
     url           += apiUrl.replace(/^http[s]?:\/\//, '');
     let headers    = new Headers();
@@ -302,19 +338,19 @@ export default Ember.Component.extend(NodeDriver, {
     console.log(`Rancher version: ${version} api call with authToken: ${this.authToken} for command: ${path}`);
     if(sendHeaders) {
       if(login) {
-        options['body'] = `username=${ escape(this.config.user) }@${ escape(this.config.realm) }&password=${ escape(this.config.password) }`;
+        options['body'] = `username=${ escape(this.config.proxmoxUserName) }@${ escape(this.config.proxmoxRealm) }&password=${ escape(this.config.proxmoxUserPassword) }`;
         headers.append('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8');
         get(this, 'cookies').remove("PVEAuthCookie");
       } else {
         get(this, 'cookies').setWithOptions("PVEAuthCookie", this.authToken.ticket, {
           secure: 'auto'
         });
-  
+
         headers.append("X-API-Cookie-Header", `PVEAuthCookie=${this.authToken.ticket};`);
         headers.append("CSRFPreventionToken", this.authToken.CSRFPreventionToken);
         headers.append("username", this.authToken.username);
       }
-    }    
+    }
 
     options['headers'] = headers;
     console.log('fetch options: ', options);

@@ -16,50 +16,42 @@
       <div class="row">
         <div class="col span-4">
           <label class="acc-label">Host Name</label>
-          {{input value=config.host placeholder="10.0.0.1" classNames="form-control" focus-out="preFetchBaseData"}}
-        </div>
-        <div class="col span-4">
-          <label class="acc-label">Port</label>
-          {{input value=config.port placeholder=resourceFields.port.default classNames="form-control" focus-out="preFetchBaseData"}}
-          <p class="text-info text-small m-0">{{get resourceFields "port.description"}}</p>
+          {{input value=config.proxmoxHost placeholder="10.0.0.1" classNames="form-control" focus-out="preFetchBaseData"}}
         </div>
         <div class="col span-4">
           <label class="acc-label">Node name</label>
-          {{input value=config.node placeholder="pve" classNames="form-control"}}
-          <p class="text-info text-small m-0">{{get resourceFields "node.description"}}</p>
-        </div>
-      </div>
-
-      <div class="row">
-        <div class="col span-4">
-          <label class="acc-label">Username</label>
-          {{input value=config.user placeholder=resourceFields.user.default classNames="form-control"}}
-          <p class="text-info text-small m-0">{{get resourceFields "user.description"}}</p>
+          {{input value=config.proxmoxNode placeholder="pve" classNames="form-control"}}
+          <p class="text-info text-small m-0">{{get resourceFields "proxmoxNode.description"}}</p>
         </div>
         <div class="col span-4">
           <label class="acc-label">Realm</label>
           {{new-select
-                classNames="form-control"
-                content=domains
-                optionLabelPath="name"
-                optionValuePath="value"
-                value=config.realm
-            }}
-          <p class="text-info text-small m-0">{{get resourceFields "realm.description"}}</p>
+                  classNames="form-control"
+                  content=domains
+                  optionLabelPath="name"
+                  optionValuePath="value"
+                  value=config.proxmoxRealm
+          }}
+          <p class="text-info text-small m-0">{{get resourceFields "proxmoxRealm.description"}}</p>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col span-4">
+          <label class="acc-label">Username</label>
+          {{input value=config.proxmoxUserName placeholder=resourceFields.proxmoxUserName.default classNames="form-control"}}
+          <p class="text-info text-small m-0">{{get resourceFields "proxmoxUserName.description"}}</p>
         </div>
 
          <div class="col span-4">
           <label class="acc-label">Password</label>
-          {{input type="password" value=config.password classNames="form-control"}}
-          <p class="text-info text-small m-0">{{get resourceFields "password.description"}}</p>
+          {{input type="password" value=config.proxmoxUserPassword classNames="form-control"}}
+          <p class="text-info text-small m-0">{{get resourceFields "proxmoxUserPassword.description"}}</p>
         </div>
       </div>
 
       <div class="text-center pt-20 ember-view">
         {{#if (eq step 1)}}
           <button {{action "proxmoxLogin"}} class="btn bg-primary">Connect Proxmox</button>
-
-          {{top-errors errors=errors}}
         {{else if (eq step 2)}}
           <i class="icon icon-spinner spin"></i>Loading&hellip;
         {{/if}}
@@ -68,7 +60,8 @@
     {{/accordion-list-item}}
 
     {{#if (eq step 3)}}
-      {{#accordion-list-item
+    {{!-- TODO: Add Support for adding SSH key --}}
+      {{!-- {{#accordion-list-item
                 title="Guesst user information"
                 detail="Set guest os user information such authorized ssh key's and ssh private key"
                 expandAll=expandAll
@@ -108,7 +101,7 @@
             <p class="text-info text-small m-0">{{get resourceFields "guestSshAuthorizedKeys.description"}}</p>
           </div>
         </div>
-      {{/accordion-list-item}}
+      {{/accordion-list-item}} --}}
 
       {{#accordion-list-item
             title="OS"
@@ -119,26 +112,26 @@
       }}
         <div class="row">
           <div class="col span-6">
-            <label class="acc-label">Image file</label>
+            <label class="acc-label">VM Template</label>
 
             {{new-select
                 classNames="form-control"
-                content=imageFiles
-                optionLabelPath="volid"
-                optionValuePath="volid"
-                value=config.imageFile
-                prompt="Select iso image"
+                content=vmTemplates
+                optionLabelPath="name"
+                optionValuePath="vmid"
+                value=config.vmCloneVmid
+                prompt="Select VM Template"
             }}
-            <p class="text-info text-small m-0">{{get resourceFields "imageFile.description"}}</p>
+            <p class="text-info text-small m-0">{{get resourceFields "vmCloneVmid.description"}}</p>
           </div>
 
           <div class="col span-6">
             <label class="acc-label">Root Disk Size</label>
               <div class="input-group">
-                {{input-integer min=1 value=config.disksizeGb classNames="form-control"}}
+                {{input-integer min=1 value=config.vmStorageSize classNames="form-control"}}
                 <div class="input-group-addon bg-default">GB</div>
               </div>
-            <p class="text-info text-small m-0">{{get resourceFields "disksizeGb.description"}}</p> 
+            <p class="text-info text-small m-0">{{get resourceFields "vmStorageSize.description"}}</p>
           </div>
         </div>
 
@@ -150,11 +143,11 @@
                 content=storage
                 optionLabelPath="storage"
                 optionValuePath="storage"
-                value=config.storage
-                prompt="Select iso image"
+                value=config.vmStoragePath
+                prompt="Select storage"
             }}
             {{get imageFiles}}
-            <p class="text-info text-small m-0">{{get resourceFields "imageFile.description"}}</p>
+            <p class="text-info text-small m-0">{{get resourceFields "vmStoragePath.description"}}</p>
           </div>
 
           <div class="col span-6">
@@ -164,10 +157,10 @@
                 content=storageTypeChoices
                 optionLabelPath="name"
                 optionValuePath="value"
-                value=config.storageType
+                value=config.vmStorageType
                 prompt="Select Storage Type"
             }}
-            <p class="text-info text-small m-0">{{get resourceFields "storageType.description"}}</p> 
+            <p class="text-info text-small m-0">{{get resourceFields "vmStorageType.description"}}</p>
           </div>
         </div>
       {{/accordion-list-item}}
@@ -183,19 +176,19 @@
           <div class="col span-4">
             <label class="acc-label">CPU</label>
             <div class="input-group">
-              {{input-integer min=1 value=config.cpuSockets classNames="form-control"}}
+              {{input-integer min=1 value=config.vmCpuSockets classNames="form-control"}}
               <div class="input-group-addon bg-default">Sockets</div>
             </div>
-            <p class="text-info text-small m-0">{{get resourceFields "cpuSockets.description"}}</p>
+            <p class="text-info text-small m-0">{{get resourceFields "vmCpuSockets.description"}}</p>
           </div>
 
           <div class="col span-4">
               <label class="acc-label">&nbsp;</label>
               <div class="input-group">
-                {{input-integer min=1 value=config.cpuCores classNames="form-control"}}
+                {{input-integer min=1 value=config.vmCpuCores classNames="form-control"}}
                 <div class="input-group-addon bg-default">Cores</div>
               </div>
-              <p class="text-info text-small m-0">{{get resourceFields "cpuCores.description"}}</p>
+              <p class="text-info text-small m-0">{{get resourceFields "vmCpuCores.description"}}</p>
           </div>
 
           <div class="col span-4">
@@ -205,37 +198,29 @@
                 content=cpuTypeChoices
                 optionLabelPath="name"
                 optionValuePath="value"
-                value=config.cpuType
+                value=config.vmCpu
+                prompt="Select CPU Type"
             }}
-            <p class="text-info text-small m-0">{{get resourceFields "cpuType.description"}}</p>
+            <p class="text-info text-small m-0">{{get resourceFields "vmCpu.description"}}</p>
           </div>
         </div>
 
+        {{!-- TODO: Add NUMA options
         <div class="row">
           <div class="col span-4">
-            <label class="acc-label">{{input type="checkbox" checked=config.cpuNuma classNames="form-control"}} NUMA </label>
-            <p class="text-info text-small m-0">{{get resourceFields "cpuNuma.description"}}</p>
+            <label class="acc-label">{{input type="checkbox" checked=config.Numa classNames="form-control"}} NUMA </label>
+            <p class="text-info text-small m-0">{{get resourceFields "Numa.description"}}</p>
           </div>
-
-          <div class="col span-4">
-            <label class="acc-label">{{input type="checkbox" checked=config.cpuPcid classNames="form-control"}} PCID</label>  
-            <p class="text-info text-small m-0">{{get resourceFields "cpuPcid.description"}}</p>
-          </div>
-
-          <div class="col span-4">
-            <label class="acc-label">{{input type="checkbox" checked=config.cpuSpecCtrl classNames="form-control"}} SPEC-CTRL</label>
-            <p class="text-info text-small m-0">{{get resourceFields "cpuSpecCtrl.description"}}</p>
-          </div>
-        </div>
+        </div> --}}
 
         <div class="row">
           <div class="col span-6">
            <label class="acc-label">Memory Size</label>
             <div class="input-group">
-              {{input-integer min=1 value=config.memoryGb classNames="form-control"}}
+              {{input-integer min=1 value=config.vmMemory classNames="form-control"}}
               <div class="input-group-addon bg-default">GB</div>
             </div>
-            <p class="text-info text-small m-0">{{get resourceFields "memoryGb.description"}}</p>
+            <p class="text-info text-small m-0">{{get resourceFields "vmMemory.description"}}</p>
           </div>
 
           <div class="col span-6">
@@ -259,9 +244,10 @@
                 content=bridges
                 optionLabelPath="iface"
                 optionValuePath="iface"
-                value=config.netBridge
+                value=config.vmNetBridge
+                prompt="Select Network Bridge"
             }}
-            <p class="text-info text-small m-0">{{get resourceFields "netBridge.description"}}</p>
+            <p class="text-info text-small m-0">{{get resourceFields "vmNetBridge.description"}}</p>
           </div>
 
           <div class="col span-6">
@@ -271,21 +257,24 @@
                 content=netModelChoices
                 optionLabelPath="name"
                 optionValuePath="value"
-                value=config.netModel
+                value=config.vmNetModel
+                prompt="Select Network Interface Model"
             }}
-            <p class="text-info text-small m-0">{{get resourceFields "netModel.description"}}</p>
+            <p class="text-info text-small m-0">{{get resourceFields "vmNetModel.description"}}</p>
           </div>
         </div>
 
         <div class="row">
           <div class="col span-6">
             <label class="acc-label">VLAN Tag</label>
-            {{input type=text value=config.netVlantag placeholder="No Vlan" classNames="form-control"}}
-            <p class="text-info text-small m-0">{{get resourceFields "netVlantag.description"}}</p>
+            {{input type=text value=config.vmNetTag placeholder="No Vlan" classNames="form-control"}}
+            <p class="text-info text-small m-0">{{get resourceFields "vmNetTag.description"}}</p>
           </div>
 
           <div class="col span-6">
-            <label class="acc-label">MAC Address</label>
+            <label class="acc-label">MTU</label>
+            {{input type=text value=config.vmNetMtu classNames="form-control"}}
+            <p class="text-info text-small m-0">{{get resourceFields "vmNetMtu.description"}}</p>
           </div>
         </div>
 
@@ -312,12 +301,9 @@
       }}
     {{/if}}
   {{/accordion-list}}
-
-  {{#if (eq step 3)}}
     {{!-- This component shows errors produced by validate() in the component --}}
     {{top-errors errors=errors}}
 
     {{!-- This component shows the Create and Cancel buttons --}}
-    {{save-cancel save="saveData" cancel="cancel"}}
-  {{/if}}
+    {{save-cancel save=(action "save") editing=editing cancel=(action "cancel")}}
 </section>
