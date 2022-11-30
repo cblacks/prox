@@ -4,7 +4,7 @@
   "description": "Rancher UI driver for Proxmox VE docker-machine drivers",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/cuza/rancher-ui-driver-proxmoxve"
+    "url": "git+https://github.com/cuza/rancher-ui-driver-proxmoxve.git"
   },
   "author": "Rancher Labs, Inc.",
   "license": "Apache-2.0",
