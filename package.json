@@ -1,10 +1,10 @@
 {
   "name": "ui-driver-proxmoxve",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Rancher UI driver for Proxmox VE docker-machine drivers",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mhermosi/ui-driver-proxmoxve.git"
+    "url": "git+https://github.com/cuza/rancher-ui-driver-proxmoxve.git"
   },
   "author": "Rancher Labs, Inc.",
   "license": "Apache-2.0",
@@ -16,7 +16,7 @@
     "clean": "./node_modules/.bin/gulp clean",
     "build": "./node_modules/.bin/gulp build"
   },
-  "homepage": "https://github.com/mhermosi/ui-driver-proxmoxve#readme",
+  "homepage": "https://github.com/cuza/rancher-ui-driver-proxmoxve#readme",
   "devDependencies": {
     "@babel/core": "^7.2.2",
     "babel-plugin-add-module-exports": "^1.0.0",
@@ -32,8 +32,8 @@
     "gulp-replace": "1.0.0",
     "gulp-sourcemaps": "2.6.4",
     "jshint": "2.9.7",
+    "loader.js": "^4.2.3",
     "replace-string": "^2.0.0",
     "yargs": "12.0.5"
-  },
-  "dependencies": {}
+  }
 }
