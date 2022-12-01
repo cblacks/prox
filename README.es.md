@@ -4,7 +4,7 @@ Controlador de interfaz de usuario de Rancher 2 para [Proxmox VE](https://www.pr
 
 ## Uso del controlador de interfaz de usuario Proxmox VE
 
-Consulte la documentación de Rancher sobre [cómo agregar un controlador de nodo] (https://rancher.com/docs/rancher/v2.6/en/admin-settings/drivers/node-drivers/) a su instalación. La parte relevante está en 'Agregar controladores de nodos personalizados':
+Consulte la documentación de Rancher sobre [cómo agregar un controlador de nodo](https://rancher.com/docs/rancher/v2.6/en/admin-settings/drivers/node-drivers/) a su instalación. La parte relevante está en 'Agregar controladores de nodos personalizados':
 
 1. Desde la navegación expandible en la parte superior izquierda, seleccione Aplicaciones globales > Administración de clústeres. Luego navegue a Clústeres > Controladores. En la página Controladores, seleccione la pestaña Controladores de nodo.
 1. Haga clic en Agregar controlador de nodo o simplemente active el controlador si el controlador "Proxmox" ya está presente.
