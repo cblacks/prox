@@ -42,4 +42,5 @@ Para que otros usuarios vean su controlador, debe compilarlo y alojar la salida 
 
 ## Créditos
 Este controlador se basa en el gran trabajo de:
+* [lnxbil](https://github.com/lnxbil) y su [docker-machine-driver-proxmox-ve](https://github.com/lnxbil/docker-machine-driver-proxmox-ve)
 * [mhermosi](https://github.com/mhermosi) y su [ui-driver-proxmoxve](https://github.com/mhermosi/ui-driver-proxmoxve)
