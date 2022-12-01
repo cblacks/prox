@@ -15,7 +15,7 @@ See the Rancher Documentation on [how to add a node driver](https://rancher.com/
    | Download URL      | `https://github.com/cuza/docker-machine-driver-proxmox-ve/releases/download/v0.0.2-alpha/docker-machine-driver-proxmoxve.linux-amd64` |
    | Custom UI URL     | `https://cuza.github.io/rancher-ui-driver-proxmoxve/component.js` |
    | Checksum | `8771ed1afa47a3dbc310897baacf81f7` |
-   | Whitelist Domains | - `cuza.github.io`<br />- `your-proxmox-host` |
+   | Whitelist Domains | - `cuza.github.io`<br /> - `your-proxmox-host` |
 
    Hint: When updating the driver, you might need to clone your node templates to ensure they use the updated driver version.
 
@@ -42,4 +42,6 @@ For other users to see your driver, you need to build it and host the output on 
 
 ## Credits
 This driver is based on the great work of:
+* [lnxbil](https://github.com/lnxbil) and his [docker-machine-driver-proxmox-ve](https://github.com/lnxbil/docker-machine-driver-proxmox-ve)
 * [mhermosi](https://github.com/mhermosi) and his [ui-driver-proxmoxve](https://github.com/mhermosi/ui-driver-proxmoxve)
+
