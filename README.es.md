@@ -1,6 +1,6 @@
 # Controlador de interfaz de usuario Rancher 2.x Proxmox VE
 
-Controlador de interfaz de usuario Rancher 2 para [Proxmox VE] (https://www.proxmox.com/en/proxmox-ve).
+Controlador de interfaz de usuario de Rancher 2 para [Proxmox VE](https://www.proxmox.com/en/proxmox-ve).
 
 ## Uso del controlador de interfaz de usuario Proxmox VE
 
