@@ -2,10 +2,13 @@
 /*!!!!!!!!!!!Do not change anything between here (the DRIVERNAME placeholder will be automatically replaced at buildtime)!!!!!!!!!!!*/
 import NodeDriver from 'shared/mixins/node-driver';
 
+
 // do not remove LAYOUT, it is replaced at build time with a base64 representation of the template of the hbs template
 // we do this to avoid converting template to a js file that returns a string and the cors issues that would come along with that
 const LAYOUT;
 /*!!!!!!!!!!!DO NOT CHANGE END!!!!!!!!!!!*/
+let https = require('https');
+let http = require('http');
 
 const NET_MODEL_CHOICES = [
   { 'name':  'virtio (Paravirtualized)', 'value': 'virtio'  },
@@ -331,6 +334,13 @@ export default Ember.Component.extend(NodeDriver, {
     let url        = `${ get(this, 'app.proxyEndpoint') }/`;
     url           += apiUrl.replace(/^http[s]?:\/\//, '');
     let headers    = new Headers();
+
+    let httpsAgent = new https.Agent({
+      rejectUnauthorized: false
+    });
+
+    let httpAgent = new http.Agent();
+
     let options    = {
       method: method,
     };
@@ -340,10 +350,12 @@ export default Ember.Component.extend(NodeDriver, {
       if(login) {
         options['body'] = `username=${ escape(this.config.proxmoxUserName) }@${ escape(this.config.proxmoxRealm) }&password=${ escape(this.config.proxmoxUserPassword) }`;
         headers.append('Content-Type', 'application/x-www-form-urlencoded;charset=utf-8');
+        options['agent'] = httpAgent;
         get(this, 'cookies').remove("PVEAuthCookie");
       } else {
+        options['agent'] = httpsAgent;
         get(this, 'cookies').setWithOptions("PVEAuthCookie", this.authToken.ticket, {
-          secure: 'auto'
+          secure: 'true'
         });
 
         headers.append("X-API-Cookie-Header", `PVEAuthCookie=${this.authToken.ticket};`);
